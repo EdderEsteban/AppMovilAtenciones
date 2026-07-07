@@ -1,7 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.RegistrosAtenciones" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/color_brand</item>
+        <item name="colorOnPrimary">@color/color_on_brand</item>
+        <item name="colorPrimaryContainer">@color/color_brand_dark</item>
+        <item name="colorOnPrimaryContainer">@color/color_on_brand</item>
+        <item name="colorSecondary">@color/color_accent</item>
+        <item name="colorOnSecondary">@color/color_on_brand</item>
+        <item name="android:colorBackground">@color/color_ground</item>
+        <item name="colorSurface">@color/color_surface</item>
+        <item name="colorOnSurface">@color/color_ink</item>
+        <item name="colorOutline">@color/color_line</item>
     </style>
 </resources>

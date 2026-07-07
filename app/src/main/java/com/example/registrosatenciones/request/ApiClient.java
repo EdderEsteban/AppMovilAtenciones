@@ -17,7 +17,6 @@ import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
-import retrofit2.converter.scalars.ScalarsConverterFactory;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
@@ -28,7 +27,7 @@ import retrofit2.http.Query;
 public class ApiClient {
 
 
-    public static final String URLBASE = "https://cnvgwf2q-5237.brs.devtunnels.ms/"; // <---Poner la URL!!!
+    public static final String URLBASE = "https://cnvgwf2q-5237.brs.devtunnels.ms/api/";
 
     public static AtencionesService getApiAtenciones() {
         Gson gson = new GsonBuilder()
@@ -37,7 +36,6 @@ public class ApiClient {
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(URLBASE)
-                .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
 

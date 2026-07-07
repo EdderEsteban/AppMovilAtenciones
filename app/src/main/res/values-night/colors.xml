@@ -1,3 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="color_brand">#12817A</color>
+    <color name="color_brand_dark">#0D625C</color>
+    <color name="color_accent">#12B3A0</color>
+    <color name="color_on_brand">#EAFBF7</color>
+
+    <color name="color_ground">#0B1615</color>
+    <color name="color_surface">#132422</color>
+    <color name="color_ink">#E9F2F0</color>
+    <color name="color_muted">#8DA29D</color>
+    <color name="color_line">#1F332F</color>
+    <color name="color_soft">#16302C</color>
+
+    <color name="color_ok">#1E9E6A</color>
+    <color name="color_pending">#E0A233</color>
+    <color name="color_pending_bg">#2A2410</color>
+    <color name="color_error">#C7452F</color>
 </resources>

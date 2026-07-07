@@ -20,6 +20,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildFeatures {
+        viewBinding = true
+    }
+
     buildTypes {
         release {
             optimization {
@@ -38,7 +42,24 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
     implementation(libs.material)
+
+    implementation(libs.room.runtime)
+    annotationProcessor(libs.room.compiler)
+
+    implementation(libs.lifecycle.viewmodel)
+    implementation(libs.lifecycle.livedata)
+
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
+
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
+
+    implementation(libs.glide)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
+
     androidTestImplementation(libs.ext.junit)
 }
