@@ -25,6 +25,7 @@ public class PacienteEntity {
     @Nullable private String domicilio;
     @Nullable private String telefono;
     @Nullable private String obraSocial;
+    @Nullable private Integer edad;    // cacheada de la búsqueda del servidor (no se recalcula en el cliente)
 
     @ColumnInfo(defaultValue = "0")
     private int syncState;          // SyncEstado.PENDIENTE / SINCRONIZADO / ERROR
@@ -62,4 +63,7 @@ public class PacienteEntity {
 
     public int getSyncState() { return syncState; }
     public void setSyncState(int syncState) { this.syncState = syncState; }
+
+    @Nullable public Integer getEdad() { return edad; }
+    public void setEdad(@Nullable Integer edad) { this.edad = edad; }
 }

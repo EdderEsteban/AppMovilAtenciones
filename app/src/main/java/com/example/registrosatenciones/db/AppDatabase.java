@@ -39,6 +39,8 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "atenciones.db")
+                            // TODO: reemplazar por Migration reales antes de un release con datos que importe conservar.
+                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }

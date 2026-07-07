@@ -28,6 +28,18 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".ui.seleccioninstitucion.SeleccionInstitucionActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.pacientes.PacientesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.altapaciente.AltaPacienteActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
