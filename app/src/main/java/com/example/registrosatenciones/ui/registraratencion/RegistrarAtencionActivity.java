@@ -25,6 +25,7 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
     private ActivityRegistrarAtencionBinding binding;
     private RegistrarAtencionViewModel viewModel;
     private long pacienteLocalId;
+    private boolean pacienteTieneObraSocial;
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
 
@@ -45,6 +46,25 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             StringBuilder detalle = new StringBuilder("DNI ").append(paciente.getDni());
             if (paciente.getEdad() != null) detalle.append(" · ").append(paciente.getEdad()).append(" años");
             binding.tvDetallePaciente.setText(detalle.toString());
+
+            // Embarazada: no aplica a pacientes varones (igual que el panel .NET)
+            boolean esVaron = "M".equals(paciente.getSexo());
+            binding.rowEmbarazada.setVisibility(esVaron ? View.GONE : View.VISIBLE);
+            binding.divisorEmbarazada.setVisibility(esVaron ? View.GONE : View.VISIBLE);
+
+            // Obra social: si ya tiene una cargada, se muestra de solo lectura y no se pide de nuevo
+            pacienteTieneObraSocial = paciente.getObraSocial() != null && !paciente.getObraSocial().isEmpty();
+            if (pacienteTieneObraSocial) {
+                binding.tvObraSocialActual.setText("Obra social: " + paciente.getObraSocial());
+                binding.tvObraSocialActual.setVisibility(View.VISIBLE);
+                binding.switchSinObraSocial.setChecked(false);
+                binding.switchSinObraSocial.setEnabled(false);
+                binding.tilNuevaObraSocial.setVisibility(View.GONE);
+            } else {
+                binding.tvObraSocialActual.setVisibility(View.GONE);
+                binding.switchSinObraSocial.setEnabled(true);
+                actualizarVisibilidadNuevaObraSocial();
+            }
         });
 
         viewModel.observarCatalogo().observe(this, this::renderizarPrestaciones);
@@ -53,15 +73,31 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             if (guardado != null && guardado) finish();
         });
 
+        binding.switchSinObraSocial.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (pacienteTieneObraSocial) return;
+            actualizarVisibilidadNuevaObraSocial();
+        });
+
         binding.btnGuardar.setOnClickListener(v -> {
             int tipoAtencion = binding.btnInternado.isChecked() ? 2 : 1;
             boolean embarazada = binding.switchEmbarazada.isChecked();
             boolean sinObraSocial = binding.switchSinObraSocial.isChecked();
             String observaciones = binding.etObservaciones.getText().toString();
+            String nuevaObraSocial = binding.etNuevaObraSocial.getText().toString();
 
             viewModel.guardarAtencion(pacienteLocalId, tipoAtencion, embarazada, sinObraSocial,
-                    observaciones, obtenerPrestacionesSeleccionadas());
+                    observaciones, nuevaObraSocial, obtenerPrestacionesSeleccionadas());
         });
+    }
+
+    private void actualizarVisibilidadNuevaObraSocial() {
+        boolean sinObraSocial = binding.switchSinObraSocial.isChecked();
+        if (sinObraSocial) {
+            binding.tilNuevaObraSocial.setVisibility(View.GONE);
+            binding.etNuevaObraSocial.setText("");
+        } else {
+            binding.tilNuevaObraSocial.setVisibility(View.VISIBLE);
+        }
     }
 
     private void renderizarPrestaciones(List<TipoPrestacionEnfermeriaEntity> catalogo) {

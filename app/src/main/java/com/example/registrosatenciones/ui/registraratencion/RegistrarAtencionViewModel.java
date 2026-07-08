@@ -58,18 +58,21 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
     }
 
     public void guardarAtencion(long pacienteLocalId, int tipoAtencion, boolean embarazada,
-                                boolean sinObraSocial, String observaciones,
+                                boolean sinObraSocial, String observaciones, String nuevaObraSocial,
                                 List<PrestacionEnfermeriaEntity> prestaciones) {
         if (prestaciones == null || prestaciones.isEmpty()) {
             Toast.makeText(context, "Elegí al menos una prestación", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        String nuevaObraSocialLimpia = TextUtils.isEmpty(nuevaObraSocial) ? null : nuevaObraSocial.trim();
+
         AtencionEnfermeriaEntity atencion = new AtencionEnfermeriaEntity();
         atencion.setPacienteLocalId(pacienteLocalId);
         atencion.setTipoAtencion(tipoAtencion);
         atencion.setEmbarazada(embarazada);
         atencion.setSinObraSocial(sinObraSocial);
+        atencion.setNuevaObraSocial(sinObraSocial ? null : nuevaObraSocialLimpia);
         atencion.setObservaciones(TextUtils.isEmpty(observaciones) ? null : observaciones.trim());
         atencion.setFechaRegistroLocal(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT).format(new Date()));
         atencion.setInstitucionIdCaptura(PreferenciasUsuario.getInstitucionActivaId(context));
@@ -77,6 +80,17 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
 
         AppExecutors.io().execute(() -> {
             atencionDao.guardarConPrestaciones(atencion, prestaciones);
+
+            // Igual que el backend: si se cargó una obra social nueva, queda en el registro del paciente
+            // para que la próxima atención ya no la vuelva a pedir.
+            if (!sinObraSocial && nuevaObraSocialLimpia != null) {
+                PacienteEntity paciente = pacienteDao.obtenerPorLocalId(pacienteLocalId);
+                if (paciente != null && (paciente.getObraSocial() == null || paciente.getObraSocial().isEmpty())) {
+                    paciente.setObraSocial(nuevaObraSocialLimpia);
+                    pacienteDao.actualizar(paciente);
+                }
+            }
+
             AppExecutors.ejecutarEnUI(() -> {
                 Toast.makeText(context, "Atención guardada. Se sincronizará cuando haya conexión.", Toast.LENGTH_LONG).show();
                 guardadoExitoso.setValue(true);
