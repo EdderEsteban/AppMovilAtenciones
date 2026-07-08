@@ -11,11 +11,11 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.example.registrosatenciones.MainActivity;
 import com.example.registrosatenciones.request.ApiClient;
 import com.example.registrosatenciones.request.LoginRequest;
 import com.example.registrosatenciones.response.InstitucionResponse;
 import com.example.registrosatenciones.response.LoginResponse;
+import com.example.registrosatenciones.ui.inicio.InicioActivity;
 import com.example.registrosatenciones.ui.seleccioninstitucion.SeleccionInstitucionActivity;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
 
@@ -84,7 +84,7 @@ public class LoginViewModel extends AndroidViewModel {
             PreferenciasUsuario.guardarInstitucionActiva(context, body.getInstitucionActivaId(), nombreInstitucion);
             com.example.registrosatenciones.util.CatalogoSync.descargarTiposPrestacionEnfermeria(context);
 
-            Intent intent = new Intent(context, MainActivity.class);
+            Intent intent = new Intent(context, InicioActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         }

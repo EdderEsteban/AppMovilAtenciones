@@ -25,9 +25,8 @@
         </activity>
 
         <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
+            android:name=".ui.inicio.InicioActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ui.seleccioninstitucion.SeleccionInstitucionActivity"
@@ -51,10 +50,6 @@
 
         <activity
             android:name=".ui.sincronizacion.SincronizacionActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.dashboard.DashboardActivity"
             android:exported="false" />
 
     </application>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_inicio"
+        android:icon="@drawable/ic_nav_inicio"
+        android:title="Inicio" />
+
+    <item
+        android:id="@+id/nav_pacientes"
+        android:icon="@drawable/ic_nav_pacientes"
+        android:title="Pacientes" />
+
+    <item
+        android:id="@+id/nav_sincronizar"
+        android:icon="@drawable/ic_nav_sincronizar"
+        android:title="Sincronizar" />
+
+    <item
+        android:id="@+id/nav_perfil"
+        android:icon="@drawable/ic_nav_perfil"
+        android:title="Perfil" />
+
+</menu>

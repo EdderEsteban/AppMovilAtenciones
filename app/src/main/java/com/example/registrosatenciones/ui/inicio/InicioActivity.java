@@ -1,5 +1,6 @@
-package com.example.registrosatenciones.ui.dashboard;
+package com.example.registrosatenciones.ui.inicio;
 
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -8,28 +9,32 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.adapters.RankingAdapter;
-import com.example.registrosatenciones.databinding.ActivityDashboardBinding;
+import com.example.registrosatenciones.databinding.ActivityInicioBinding;
 import com.example.registrosatenciones.response.DashboardResponse;
+import com.example.registrosatenciones.ui.dashboard.DashboardViewModel;
+import com.example.registrosatenciones.ui.pacientes.PacientesActivity;
+import com.example.registrosatenciones.ui.sincronizacion.SincronizacionActivity;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
 
 import java.util.List;
 
-public class DashboardActivity extends AppCompatActivity {
+public class InicioActivity extends AppCompatActivity {
 
-    private ActivityDashboardBinding binding;
+    private ActivityInicioBinding binding;
     private DashboardViewModel viewModel;
     private RankingAdapter rankingAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityDashboardBinding.inflate(getLayoutInflater());
+        binding = ActivityInicioBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         binding.tvSaludo.setText("Hola, " + primerNombre(PreferenciasUsuario.getNombreCompleto(this)));
@@ -41,13 +46,51 @@ public class DashboardActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         viewModel.getDashboard().observe(this, this::renderizarDashboard);
+        viewModel.getCargando().observe(this, cargando ->
+                binding.progressDashboard.setVisibility(cargando ? View.VISIBLE : View.GONE));
         viewModel.cargar();
+
+        binding.bottomNav.setSelectedItemId(R.id.nav_inicio);
+        binding.bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_inicio) {
+                return true;
+            } else if (id == R.id.nav_pacientes) {
+                startActivity(new Intent(this, PacientesActivity.class));
+                return true;
+            } else if (id == R.id.nav_sincronizar) {
+                startActivity(new Intent(this, SincronizacionActivity.class));
+                return true;
+            } else if (id == R.id.nav_perfil) {
+                mostrarPerfil();
+                return true;
+            }
+            return false;
+        });
+
+        binding.fabNuevaAtencion.setOnClickListener(v ->
+                startActivity(new Intent(this, PacientesActivity.class)));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         viewModel.cargar();
+    }
+
+    private void mostrarPerfil() {
+        String mensaje = "Nombre: " + PreferenciasUsuario.getNombreCompleto(this) +
+                "\nEmail: " + PreferenciasUsuario.getEmail(this) +
+                "\nRol: " + PreferenciasUsuario.getRol(this) +
+                "\nInstitución: " + PreferenciasUsuario.getInstitucionActivaNombre(this);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Mi perfil")
+                .setMessage(mensaje)
+                .setPositiveButton("Cerrar sesión", (dialog, which) -> viewModel.cerrarSesion())
+                .setNegativeButton("Volver", (dialog, which) -> binding.bottomNav.setSelectedItemId(R.id.nav_inicio))
+                .setCancelable(false)
+                .show();
     }
 
     private void renderizarDashboard(DashboardResponse d) {
