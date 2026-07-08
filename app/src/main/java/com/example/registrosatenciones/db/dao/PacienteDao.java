@@ -36,4 +36,10 @@ public interface PacienteDao {
 
     @Query("SELECT * FROM pacientes WHERE syncState = :estado")
     List<PacienteEntity> listarPorEstado(int estado);   // p/ pendientes en el sync
+
+    @Query("SELECT * FROM pacientes WHERE syncState = :estado ORDER BY apellido, nombre")
+    LiveData<List<PacienteEntity>> observarPorEstado(int estado);
+
+    @Query("SELECT * FROM pacientes WHERE localId = :localId")
+    PacienteEntity obtenerPorLocalId(long localId);
 }

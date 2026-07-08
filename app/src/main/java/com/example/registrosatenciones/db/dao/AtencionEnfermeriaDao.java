@@ -50,4 +50,9 @@ public interface AtencionEnfermeriaDao {
 
     @Query("SELECT * FROM prestaciones_enfermeria WHERE atencionLocalId = :atencionLocalId")
     List<PrestacionEnfermeriaEntity> prestacionesDe(long atencionLocalId);
+
+    @Query("SELECT * FROM atenciones_enfermeria " +
+            "WHERE syncState = :estado AND institucionIdCaptura = :institucionId " +
+            "ORDER BY fechaRegistroLocal DESC")
+    LiveData<List<AtencionEnfermeriaEntity>> observarPorEstadoEInstitucion(int estado, int institucionId);
 }

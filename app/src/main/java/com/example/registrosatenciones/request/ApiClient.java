@@ -2,6 +2,7 @@ package com.example.registrosatenciones.request;
 
 import com.example.registrosatenciones.response.AtencionEnfermeriaDetalleResponse;
 import com.example.registrosatenciones.response.CrearAtencionResponse;
+import com.example.registrosatenciones.response.CrearPacienteResponse;
 import com.example.registrosatenciones.response.DashboardResponse;
 import com.example.registrosatenciones.response.ErrorResponse;
 import com.example.registrosatenciones.response.LoginResponse;
@@ -94,5 +95,10 @@ public class ApiClient {
         // Metodo Dashboard
         @GET("dashboard")
         Call<DashboardResponse> obtenerDashboard(@Header("Authorization") String token);
+
+        // Metodo CrearPaciente
+        @POST("pacientes")
+        Call<CrearPacienteResponse> crearPaciente(@Header("Authorization") String token,
+                                                   @Body CrearPacienteRequest request);
     }
 }
