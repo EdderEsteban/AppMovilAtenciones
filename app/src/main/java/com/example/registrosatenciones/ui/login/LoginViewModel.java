@@ -82,6 +82,7 @@ public class LoginViewModel extends AndroidViewModel {
         } else {
             String nombreInstitucion = buscarNombreInstitucion(body.getInstitucionActivaId(), body.getInstituciones());
             PreferenciasUsuario.guardarInstitucionActiva(context, body.getInstitucionActivaId(), nombreInstitucion);
+            com.example.registrosatenciones.util.CatalogoSync.descargarTiposPrestacionEnfermeria(context);
 
             Intent intent = new Intent(context, MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

@@ -40,6 +40,14 @@
             android:name=".ui.altapaciente.AltaPacienteActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.fichapaciente.FichaPacienteActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.registraratencion.RegistrarAtencionActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

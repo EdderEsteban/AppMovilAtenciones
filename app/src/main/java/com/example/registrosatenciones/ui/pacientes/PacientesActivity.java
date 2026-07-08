@@ -29,7 +29,9 @@ public class PacientesActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(PacientesViewModel.class);
 
         adapter = new PacienteAdapter(this, paciente -> {
-            // TODO Navegar a la Ficha del paciente
+            Intent intent = new Intent(this, com.example.registrosatenciones.ui.fichapaciente.FichaPacienteActivity.class);
+            intent.putExtra(com.example.registrosatenciones.ui.fichapaciente.FichaPacienteActivity.EXTRA_PACIENTE_LOCAL_ID, paciente.getLocalId());
+            startActivity(intent);
         });
         binding.rvPacientes.setLayoutManager(new LinearLayoutManager(this));
         binding.rvPacientes.setAdapter(adapter);

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp">
+
+    <TextView
+        android:id="@+id/tvNombrePrestacion"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="13.5sp" />
+
+    <TextView
+        android:id="@+id/btnMenos"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_stepper_button"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="−"
+        android:textColor="?attr/colorPrimary"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvCantidad"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="0"
+        android:textColor="?attr/colorOnSurface"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/btnMas"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_stepper_button"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="+"
+        android:textColor="?attr/colorPrimary"
+        android:textStyle="bold" />
+
+</LinearLayout>
+
