@@ -9,23 +9,23 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.adapters.RankingAdapter;
 import com.example.registrosatenciones.databinding.ActivityInicioBinding;
 import com.example.registrosatenciones.response.DashboardResponse;
+import com.example.registrosatenciones.ui.common.NavegacionInferiorActivity;
 import com.example.registrosatenciones.ui.dashboard.DashboardViewModel;
 import com.example.registrosatenciones.ui.pacientes.PacientesActivity;
-import com.example.registrosatenciones.ui.sincronizacion.SincronizacionActivity;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
 
 import java.util.List;
 
-public class InicioActivity extends AppCompatActivity {
+public class InicioActivity extends NavegacionInferiorActivity {
 
     private ActivityInicioBinding binding;
     private DashboardViewModel viewModel;
@@ -50,23 +50,7 @@ public class InicioActivity extends AppCompatActivity {
                 binding.progressDashboard.setVisibility(cargando ? View.VISIBLE : View.GONE));
         viewModel.cargar();
 
-        binding.bottomNav.setSelectedItemId(R.id.nav_inicio);
-        binding.bottomNav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_inicio) {
-                return true;
-            } else if (id == R.id.nav_pacientes) {
-                startActivity(new Intent(this, PacientesActivity.class));
-                return true;
-            } else if (id == R.id.nav_sincronizar) {
-                startActivity(new Intent(this, SincronizacionActivity.class));
-                return true;
-            } else if (id == R.id.nav_perfil) {
-                mostrarPerfil();
-                return true;
-            }
-            return false;
-        });
+        configurarNavInferior();
 
         binding.fabNuevaAtencion.setOnClickListener(v ->
                 startActivity(new Intent(this, PacientesActivity.class)));
@@ -78,19 +62,14 @@ public class InicioActivity extends AppCompatActivity {
         viewModel.cargar();
     }
 
-    private void mostrarPerfil() {
-        String mensaje = "Nombre: " + PreferenciasUsuario.getNombreCompleto(this) +
-                "\nEmail: " + PreferenciasUsuario.getEmail(this) +
-                "\nRol: " + PreferenciasUsuario.getRol(this) +
-                "\nInstitución: " + PreferenciasUsuario.getInstitucionActivaNombre(this);
+    @Override
+    protected BottomNavigationView getBottomNavigationView() {
+        return binding.bottomNav;
+    }
 
-        new AlertDialog.Builder(this)
-                .setTitle("Mi perfil")
-                .setMessage(mensaje)
-                .setPositiveButton("Cerrar sesión", (dialog, which) -> viewModel.cerrarSesion())
-                .setNegativeButton("Volver", (dialog, which) -> binding.bottomNav.setSelectedItemId(R.id.nav_inicio))
-                .setCancelable(false)
-                .show();
+    @Override
+    protected int getTabActual() {
+        return R.id.nav_inicio;
     }
 
     private void renderizarDashboard(DashboardResponse d) {

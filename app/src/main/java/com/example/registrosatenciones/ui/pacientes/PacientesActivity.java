@@ -6,15 +6,18 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
+import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.adapters.PacienteAdapter;
 import com.example.registrosatenciones.databinding.ActivityPacientesBinding;
 import com.example.registrosatenciones.ui.altapaciente.AltaPacienteActivity;
+import com.example.registrosatenciones.ui.common.NavegacionInferiorActivity;
 
-public class PacientesActivity extends AppCompatActivity {
+public class PacientesActivity extends NavegacionInferiorActivity {
 
     private ActivityPacientesBinding binding;
     private PacientesViewModel viewModel;
@@ -56,5 +59,17 @@ public class PacientesActivity extends AppCompatActivity {
 
         binding.btnNuevo.setOnClickListener(v ->
                 startActivity(new Intent(this, AltaPacienteActivity.class)));
+
+        configurarNavInferior();
+    }
+
+    @Override
+    protected BottomNavigationView getBottomNavigationView() {
+        return binding.bottomNav;
+    }
+
+    @Override
+    protected int getTabActual() {
+        return R.id.nav_pacientes;
     }
 }

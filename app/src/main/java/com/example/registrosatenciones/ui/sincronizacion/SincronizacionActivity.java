@@ -2,20 +2,23 @@ package com.example.registrosatenciones.ui.sincronizacion;
 
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
+import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.adapters.PendienteAdapter;
 import com.example.registrosatenciones.databinding.ActivitySincronizacionBinding;
 import com.example.registrosatenciones.db.entity.AtencionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
+import com.example.registrosatenciones.ui.common.NavegacionInferiorActivity;
 import com.example.registrosatenciones.util.Conectividad;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SincronizacionActivity extends AppCompatActivity {
+public class SincronizacionActivity extends NavegacionInferiorActivity {
 
     private ActivitySincronizacionBinding binding;
     private SincronizacionViewModel viewModel;
@@ -59,6 +62,18 @@ public class SincronizacionActivity extends AppCompatActivity {
         if (Conectividad.hayConexion(this)) {
             viewModel.sincronizarAhora();
         }
+
+        configurarNavInferior();
+    }
+
+    @Override
+    protected BottomNavigationView getBottomNavigationView() {
+        return binding.bottomNav;
+    }
+
+    @Override
+    protected int getTabActual() {
+        return R.id.nav_sincronizar;
     }
 
     @Override
