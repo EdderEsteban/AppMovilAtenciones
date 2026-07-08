@@ -39,7 +39,11 @@ public class PacientesActivity extends NavegacionInferiorActivity {
         binding.rvPacientes.setLayoutManager(new LinearLayoutManager(this));
         binding.rvPacientes.setAdapter(adapter);
 
-        viewModel.getPacientes().observe(this, adapter::setPacientes);
+        viewModel.getPacientes().observe(this, lista -> {
+            adapter.setPacientes(lista);
+            boolean buscoAlgo = binding.etBuscar.getText() != null && binding.etBuscar.getText().length() >= 2;
+            binding.tvSinResultados.setVisibility(buscoAlgo && (lista == null || lista.isEmpty()) ? View.VISIBLE : View.GONE);
+        });
 
         viewModel.getSinConexion().observe(this, sinConexion ->
                 binding.tvSinConexion.setVisibility(sinConexion ? View.VISIBLE : View.GONE));

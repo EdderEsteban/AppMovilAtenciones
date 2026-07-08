@@ -73,6 +73,7 @@ public class LoginViewModel extends AndroidViewModel {
     private void onLoginExitoso(LoginResponse body) {
         PreferenciasUsuario.guardarSesion(context, body.getToken(), body.getUsuarioId(),
                 body.getNombreCompleto(), body.getEmail(), body.getRol());
+        PreferenciasUsuario.guardarInstituciones(context, body.getInstituciones());
 
         if (body.isRequiereSeleccion()) {
             Intent intent = new Intent(context, SeleccionInstitucionActivity.class);

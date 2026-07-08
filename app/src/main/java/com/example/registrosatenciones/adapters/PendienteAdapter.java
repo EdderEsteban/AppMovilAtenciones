@@ -41,6 +41,16 @@ public class PendienteAdapter extends RecyclerView.Adapter<PendienteAdapter.Pend
         ItemPendiente item = items.get(position);
         holder.tvTitulo.setText(item.getTitulo());
         holder.tvSubtitulo.setText(item.getSubtitulo());
+
+        if (item.isEsError()) {
+            holder.chipEstado.setText("Error");
+            holder.chipEstado.setBackgroundResource(R.drawable.bg_chip_error);
+            holder.chipEstado.setTextColor(context.getColor(R.color.color_error));
+        } else {
+            holder.chipEstado.setText("Pendiente");
+            holder.chipEstado.setBackgroundResource(R.drawable.bg_chip_pending);
+            holder.chipEstado.setTextColor(context.getColor(R.color.color_pending));
+        }
     }
 
     @Override
@@ -51,11 +61,13 @@ public class PendienteAdapter extends RecyclerView.Adapter<PendienteAdapter.Pend
     public static class PendienteViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvTitulo;
         private final TextView tvSubtitulo;
+        private final TextView chipEstado;
 
         public PendienteViewHolder(@NonNull View itemView) {
             super(itemView);
             tvTitulo = itemView.findViewById(R.id.tvTitulo);
             tvSubtitulo = itemView.findViewById(R.id.tvSubtitulo);
+            chipEstado = itemView.findViewById(R.id.chipEstado);
         }
     }
 }

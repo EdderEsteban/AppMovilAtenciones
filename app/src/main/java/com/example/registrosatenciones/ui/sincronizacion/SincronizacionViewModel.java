@@ -2,6 +2,7 @@ package com.example.registrosatenciones.ui.sincronizacion;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,6 +24,7 @@ import com.example.registrosatenciones.request.PrestacionItemRequest;
 import com.example.registrosatenciones.response.CrearAtencionResponse;
 import com.example.registrosatenciones.response.CrearPacienteResponse;
 import com.example.registrosatenciones.response.PacienteResponse;
+import com.example.registrosatenciones.ui.login.LoginActivity;
 import com.example.registrosatenciones.util.AppExecutors;
 import com.example.registrosatenciones.util.Conectividad;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
@@ -53,9 +55,18 @@ public class SincronizacionViewModel extends AndroidViewModel {
         return pacienteDao.observarPorEstado(SyncEstado.PENDIENTE);
     }
 
+    public LiveData<List<PacienteEntity>> observarPacientesConError() {
+        return pacienteDao.observarPorEstado(SyncEstado.ERROR);
+    }
+
     public LiveData<List<AtencionEnfermeriaEntity>> observarAtencionesPendientes() {
         int institucionActiva = PreferenciasUsuario.getInstitucionActivaId(context);
         return atencionDao.observarPorEstadoEInstitucion(SyncEstado.PENDIENTE, institucionActiva);
+    }
+
+    public LiveData<List<AtencionEnfermeriaEntity>> observarAtencionesConError() {
+        int institucionActiva = PreferenciasUsuario.getInstitucionActivaId(context);
+        return atencionDao.observarPorEstadoEInstitucion(SyncEstado.ERROR, institucionActiva);
     }
 
     public LiveData<Boolean> getSincronizando() {
@@ -78,7 +89,11 @@ public class SincronizacionViewModel extends AndroidViewModel {
 
         List<PacienteEntity> pacientesPendientes = pacienteDao.listarPorEstado(SyncEstado.PENDIENTE);
         for (PacienteEntity paciente : pacientesPendientes) {
-            sincronizarPaciente(paciente, token);
+            boolean sesionValida = sincronizarPaciente(paciente, token);
+            if (!sesionValida) {
+                finalizarSincronizacion();
+                return;
+            }
         }
 
         List<AtencionEnfermeriaEntity> atencionesPendientes = atencionDao.listarPorEstado(SyncEstado.PENDIENTE);
@@ -86,21 +101,30 @@ public class SincronizacionViewModel extends AndroidViewModel {
             if (atencion.getInstitucionIdCaptura() != institucionActiva) {
                 continue; // corresponde a otra institución; se sincroniza cuando el usuario vuelva ahí
             }
-            sincronizarAtencion(atencion, token);
+            boolean sesionValida = sincronizarAtencion(atencion, token);
+            if (!sesionValida) {
+                finalizarSincronizacion();
+                return;
+            }
         }
 
+        finalizarSincronizacion();
+    }
+
+    private void finalizarSincronizacion() {
         AppExecutors.ejecutarEnUI(() -> {
             sincronizando.setValue(false);
             Toast.makeText(context, "Sincronización finalizada", Toast.LENGTH_SHORT).show();
         });
     }
 
-    private void sincronizarPaciente(PacienteEntity paciente, String token) {
+    // Devuelve false si la sesión perdió la institución (409): no tiene sentido seguir intentando.
+    private boolean sincronizarPaciente(PacienteEntity paciente, String token) {
         try {
             Response<List<PacienteResponse>> busqueda =
                     ApiClient.getApiAtenciones().buscarPacientes(token, paciente.getDni()).execute();
 
-            if (!busqueda.isSuccessful() || busqueda.body() == null) return; // se reintenta la próxima vez
+            if (!busqueda.isSuccessful() || busqueda.body() == null) return true; // se reintenta la próxima vez
 
             Integer serverId = null;
             for (PacienteResponse candidato : busqueda.body()) {
@@ -119,23 +143,31 @@ public class SincronizacionViewModel extends AndroidViewModel {
                 Response<CrearPacienteResponse> creacion =
                         ApiClient.getApiAtenciones().crearPaciente(token, request).execute();
 
-                if (!creacion.isSuccessful() || creacion.body() == null) return; // se reintenta la próxima vez
-                serverId = creacion.body().getId();
+                if (creacion.isSuccessful() && creacion.body() != null) {
+                    serverId = creacion.body().getId();
+                } else if (creacion.code() == 400) {
+                    marcarError(pacienteDao, paciente); // ej: DNI duplicado — no se resuelve reintentando
+                    return true;
+                } else {
+                    return true; // falla transitoria: se reintenta la próxima vez
+                }
             }
 
             paciente.setServerId(serverId);
             paciente.setSyncState(SyncEstado.SINCRONIZADO);
             pacienteDao.actualizar(paciente);
+            return true;
 
         } catch (IOException e) {
-            // se cortó la conexión a mitad de camino: queda PENDIENTE, se reintenta la próxima vez
+            return true; // se cortó la conexión a mitad de camino: queda PENDIENTE, se reintenta
         }
     }
 
-    private void sincronizarAtencion(AtencionEnfermeriaEntity atencion, String token) {
+    // Devuelve false si la sesión perdió la institución (409): no tiene sentido seguir intentando.
+    private boolean sincronizarAtencion(AtencionEnfermeriaEntity atencion, String token) {
         PacienteEntity paciente = pacienteDao.obtenerPorLocalId(atencion.getPacienteLocalId());
         if (paciente == null || paciente.getServerId() == null) {
-            return; // el paciente todavía no se sincronizó; se reintenta la próxima vez
+            return true; // el paciente todavía no se sincronizó; se reintenta la próxima vez
         }
 
         List<PrestacionEnfermeriaEntity> prestacionesLocales = atencionDao.prestacionesDe(atencion.getLocalId());
@@ -161,11 +193,35 @@ public class SincronizacionViewModel extends AndroidViewModel {
                 atencion.setServerId(respuesta.body().getId());
                 atencion.setSyncState(SyncEstado.SINCRONIZADO);
                 atencionDao.actualizar(atencion);
+            } else if (respuesta.code() == 409) {
+                AppExecutors.ejecutarEnUI(this::irALoginPorConflicto);
+                return false;
+            } else if (respuesta.code() == 400) {
+                marcarError(atencionDao, atencion); // error de negocio — no se resuelve reintentando
             }
-            // si no fue exitosa, queda PENDIENTE y se reintenta la próxima vez
+            // otros códigos: queda PENDIENTE y se reintenta la próxima vez
+
+            return true;
 
         } catch (IOException e) {
-            // sin conexión a mitad de camino: queda PENDIENTE
+            return true; // sin conexión a mitad de camino: queda PENDIENTE
         }
+    }
+
+    private void marcarError(PacienteDao dao, PacienteEntity paciente) {
+        paciente.setSyncState(SyncEstado.ERROR);
+        dao.actualizar(paciente);
+    }
+
+    private void marcarError(AtencionEnfermeriaDao dao, AtencionEnfermeriaEntity atencion) {
+        atencion.setSyncState(SyncEstado.ERROR);
+        dao.actualizar(atencion);
+    }
+
+    private void irALoginPorConflicto() {
+        Toast.makeText(context, "Tu sesión perdió la institución activa. Volvé a iniciar sesión.", Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(context, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        context.startActivity(intent);
     }
 }

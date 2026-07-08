@@ -48,6 +48,8 @@ public class PerfilActivity extends NavegacionInferiorActivity {
                 binding.etConfirmarContrasenaNueva.getText().toString()
         ));
 
+        binding.btnCambiarInstitucion.setOnClickListener(v -> viewModel.cambiarInstitucion());
+
         binding.btnCerrarSesion.setOnClickListener(v -> viewModel.cerrarSesion());
 
         configurarNavInferior();

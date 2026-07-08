@@ -19,4 +19,5 @@
     <color name="color_pending">#C08207</color>
     <color name="color_pending_bg">#FCF1DC</color>
     <color name="color_error">#C7452F</color>
+    <color name="color_error_bg">#FBEAE6</color>
 </resources>

@@ -13,6 +13,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.example.registrosatenciones.request.ApiClient;
 import com.example.registrosatenciones.response.DashboardResponse;
 import com.example.registrosatenciones.ui.login.LoginActivity;
+import com.example.registrosatenciones.util.CatalogoSync;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
 
 import retrofit2.Call;
@@ -41,6 +42,10 @@ public class DashboardViewModel extends AndroidViewModel {
     public void cargar() {
         cargando.setValue(true);
         String token = PreferenciasUsuario.getAuthHeader(context);
+
+        // Autoreparación: si la descarga del catálogo falló al loguear (mala señal, etc.),
+        // se reintenta solo cada vez que se visita Inicio, sin que el usuario tenga que hacer nada.
+        CatalogoSync.descargarTiposPrestacionEnfermeria(context);
 
         ApiClient.getApiAtenciones().obtenerDashboard(token).enqueue(new Callback<DashboardResponse>() {
             @Override

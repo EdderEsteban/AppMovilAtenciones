@@ -90,6 +90,7 @@ public class SeleccionInstitucionViewModel extends AndroidViewModel {
     private void onSeleccionExitosa(LoginResponse body) {
         PreferenciasUsuario.guardarSesion(context, body.getToken(), body.getUsuarioId(),
                 body.getNombreCompleto(), body.getEmail(), body.getRol());
+        PreferenciasUsuario.guardarInstituciones(context, body.getInstituciones());
 
         String nombreInstitucion = buscarNombreInstitucion(body.getInstitucionActivaId(), body.getInstituciones());
         PreferenciasUsuario.guardarInstitucionActiva(context, body.getInstitucionActivaId(), nombreInstitucion);

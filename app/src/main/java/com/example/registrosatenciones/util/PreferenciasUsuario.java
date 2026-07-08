@@ -3,6 +3,14 @@ package com.example.registrosatenciones.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.example.registrosatenciones.response.InstitucionResponse;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+
 public class PreferenciasUsuario {
 
     private static final String PREFS_NAME = "atenciones_prefs";
@@ -14,6 +22,7 @@ public class PreferenciasUsuario {
     private static final String KEY_ROL = "rol";
     private static final String KEY_INSTITUCION_ID = "institucionActivaId";
     private static final String KEY_INSTITUCION_NOMBRE = "institucionActivaNombre";
+    private static final String KEY_INSTITUCIONES_JSON = "institucionesJson";
 
     private PreferenciasUsuario() {}
 
@@ -74,6 +83,21 @@ public class PreferenciasUsuario {
 
     public static String getInstitucionActivaNombre(Context context) {
         return prefs(context).getString(KEY_INSTITUCION_NOMBRE, null);
+    }
+
+    // Se cachea la lista completa (login, selección de institución, actualizar perfil) para
+    // poder ofrecer "cambiar institución" más tarde sin tener que volver a pedir credenciales.
+    public static void guardarInstituciones(Context context, List<InstitucionResponse> instituciones) {
+        String json = new Gson().toJson(instituciones);
+        prefs(context).edit().putString(KEY_INSTITUCIONES_JSON, json).apply();
+    }
+
+    public static List<InstitucionResponse> getInstituciones(Context context) {
+        String json = prefs(context).getString(KEY_INSTITUCIONES_JSON, null);
+        if (json == null) return new ArrayList<>();
+        Type tipo = new TypeToken<List<InstitucionResponse>>() {}.getType();
+        List<InstitucionResponse> lista = new Gson().fromJson(json, tipo);
+        return lista != null ? lista : new ArrayList<>();
     }
 
     public static boolean haySesionActiva(Context context) {

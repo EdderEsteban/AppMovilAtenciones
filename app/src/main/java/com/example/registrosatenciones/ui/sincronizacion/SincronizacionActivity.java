@@ -25,7 +25,9 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
     private PendienteAdapter adapter;
 
     private List<PacienteEntity> pacientesPendientes = new ArrayList<>();
+    private List<PacienteEntity> pacientesConError = new ArrayList<>();
     private List<AtencionEnfermeriaEntity> atencionesPendientes = new ArrayList<>();
+    private List<AtencionEnfermeriaEntity> atencionesConError = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,8 +46,18 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
             actualizarLista();
         });
 
+        viewModel.observarPacientesConError().observe(this, lista -> {
+            pacientesConError = lista;
+            actualizarLista();
+        });
+
         viewModel.observarAtencionesPendientes().observe(this, lista -> {
             atencionesPendientes = lista;
+            actualizarLista();
+        });
+
+        viewModel.observarAtencionesConError().observe(this, lista -> {
+            atencionesConError = lista;
             actualizarLista();
         });
 
@@ -85,29 +97,39 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
     private void actualizarEstado() {
         boolean online = Conectividad.hayConexion(this);
         int totalPendientes = pacientesPendientes.size() + atencionesPendientes.size();
+        int totalError = pacientesConError.size() + atencionesConError.size();
 
         if (Boolean.TRUE.equals(viewModel.getSincronizando().getValue())) {
             binding.tvEstado.setText("Sincronizando...");
         } else if (!online) {
             binding.tvEstado.setText("Sin conexión · se sincroniza automáticamente al volver la señal");
-        } else if (totalPendientes == 0) {
+        } else if (totalPendientes == 0 && totalError == 0) {
             binding.tvEstado.setText("Todo sincronizado");
+        } else if (totalError > 0) {
+            binding.tvEstado.setText(totalPendientes + " pendiente(s) · " + totalError + " con error");
         } else {
             binding.tvEstado.setText(totalPendientes + " pendiente(s) por sincronizar");
         }
 
-        binding.tvTituloPendientes.setText("Pendientes (" + totalPendientes + ")");
+        binding.tvTituloPendientes.setText("Pendientes (" + (totalPendientes + totalError) + ")");
     }
 
     private void actualizarLista() {
         List<ItemPendiente> items = new ArrayList<>();
 
+        for (PacienteEntity p : pacientesConError) {
+            items.add(new ItemPendiente(p.getApellido() + ", " + p.getNombre(), "No se pudo crear — revisá los datos", true));
+        }
+        for (AtencionEnfermeriaEntity a : atencionesConError) {
+            String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
+            items.add(new ItemPendiente("Atención · " + tipo, "No se pudo guardar — revisá los datos", true));
+        }
         for (PacienteEntity p : pacientesPendientes) {
-            items.add(new ItemPendiente(p.getApellido() + ", " + p.getNombre(), "Paciente nuevo · se buscará por DNI"));
+            items.add(new ItemPendiente(p.getApellido() + ", " + p.getNombre(), "Paciente nuevo · se buscará por DNI", false));
         }
         for (AtencionEnfermeriaEntity a : atencionesPendientes) {
             String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
-            items.add(new ItemPendiente("Atención · " + tipo, a.getFechaRegistroLocal()));
+            items.add(new ItemPendiente("Atención · " + tipo, a.getFechaRegistroLocal(), false));
         }
 
         adapter.setItems(items);

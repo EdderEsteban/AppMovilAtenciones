@@ -16,8 +16,10 @@ import com.example.registrosatenciones.request.ApiClient;
 import com.example.registrosatenciones.response.InstitucionResponse;
 import com.example.registrosatenciones.response.LoginResponse;
 import com.example.registrosatenciones.ui.login.LoginActivity;
+import com.example.registrosatenciones.ui.seleccioninstitucion.SeleccionInstitucionActivity;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
 
+import java.io.Serializable;
 import java.util.List;
 
 import retrofit2.Call;
@@ -84,6 +86,7 @@ public class PerfilViewModel extends AndroidViewModel {
                     LoginResponse body = response.body();
                     PreferenciasUsuario.guardarSesion(context, body.getToken(), body.getUsuarioId(),
                             body.getNombreCompleto(), body.getEmail(), body.getRol());
+                    PreferenciasUsuario.guardarInstituciones(context, body.getInstituciones());
 
                     if (body.getInstitucionActivaId() != null) {
                         String nombreInstitucion = buscarNombreInstitucion(body.getInstitucionActivaId(), body.getInstituciones());
@@ -103,6 +106,18 @@ public class PerfilViewModel extends AndroidViewModel {
                 Toast.makeText(context, "Error de conexión: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    public void cambiarInstitucion() {
+        List<InstitucionResponse> instituciones = PreferenciasUsuario.getInstituciones(context);
+        if (instituciones.size() <= 1) {
+            Toast.makeText(context, "Tu cuenta solo tiene una institución asignada", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(context, SeleccionInstitucionActivity.class);
+        intent.putExtra("instituciones", (Serializable) instituciones);
+        context.startActivity(intent);
     }
 
     public void cerrarSesion() {
