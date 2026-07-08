@@ -22,6 +22,7 @@ import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
@@ -100,5 +101,10 @@ public class ApiClient {
         @POST("pacientes")
         Call<CrearPacienteResponse> crearPaciente(@Header("Authorization") String token,
                                                    @Body CrearPacienteRequest request);
+
+        // Metodo ActualizarPerfil (email / contraseña propios)
+        @PUT("auth/perfil")
+        Call<LoginResponse> actualizarPerfil(@Header("Authorization") String token,
+                                              @Body ActualizarPerfilRequest request);
     }
 }

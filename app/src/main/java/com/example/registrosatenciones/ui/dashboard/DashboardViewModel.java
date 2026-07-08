@@ -64,11 +64,6 @@ public class DashboardViewModel extends AndroidViewModel {
         });
     }
 
-    public void cerrarSesion() {
-        PreferenciasUsuario.cerrarSesion(context);
-        irALogin();
-    }
-
     private void irALogin() {
         Intent intent = new Intent(context, LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
