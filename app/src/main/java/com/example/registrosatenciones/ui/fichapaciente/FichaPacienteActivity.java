@@ -9,8 +9,11 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.registrosatenciones.adapters.TimelineAtencionesAdapter;
+import com.example.registrosatenciones.adapters.TimelineOdontologiaAdapter;
 import com.example.registrosatenciones.databinding.ActivityFichaPacienteBinding;
+import com.example.registrosatenciones.ui.detalleatencionodontologia.DetalleAtencionOdontologiaActivity;
 import com.example.registrosatenciones.ui.registraratencion.RegistrarAtencionActivity;
+import com.example.registrosatenciones.ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity;
 
 public class FichaPacienteActivity extends AppCompatActivity {
 
@@ -18,7 +21,6 @@ public class FichaPacienteActivity extends AppCompatActivity {
 
     private ActivityFichaPacienteBinding binding;
     private FichaPacienteViewModel viewModel;
-    private TimelineAtencionesAdapter adapter;
     private long pacienteLocalId;
 
     @Override
@@ -31,10 +33,6 @@ public class FichaPacienteActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(FichaPacienteViewModel.class);
 
-        adapter = new TimelineAtencionesAdapter(this);
-        binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvTimeline.setAdapter(adapter);
-
         viewModel.observarPaciente(pacienteLocalId).observe(this, paciente -> {
             if (paciente == null) return;
             binding.tvNombrePaciente.setText(paciente.getApellido() + ", " + paciente.getNombre());
@@ -44,6 +42,18 @@ public class FichaPacienteActivity extends AppCompatActivity {
             if (paciente.getSexo() != null) detalle.append(" · ").append(paciente.getSexo());
             binding.tvDetallePaciente.setText(detalle.toString());
         });
+
+        if (viewModel.esOdontologo()) {
+            configurarTimelineOdontologia();
+        } else {
+            configurarTimelineEnfermeria();
+        }
+    }
+
+    private void configurarTimelineEnfermeria() {
+        TimelineAtencionesAdapter adapter = new TimelineAtencionesAdapter(this);
+        binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvTimeline.setAdapter(adapter);
 
         viewModel.observarAtenciones(pacienteLocalId).observe(this, atenciones -> {
             adapter.setAtenciones(atenciones);
@@ -55,6 +65,31 @@ public class FichaPacienteActivity extends AppCompatActivity {
         binding.btnNuevaAtencion.setOnClickListener(v -> {
             Intent intent = new Intent(this, RegistrarAtencionActivity.class);
             intent.putExtra(RegistrarAtencionActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+            startActivity(intent);
+        });
+    }
+
+    private void configurarTimelineOdontologia() {
+        TimelineOdontologiaAdapter adapter = new TimelineOdontologiaAdapter(this, atencion -> {
+            Intent intent = new Intent(this, DetalleAtencionOdontologiaActivity.class);
+            intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_ATENCION_LOCAL_ID, atencion.getAtencion().getLocalId());
+            intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+            startActivity(intent);
+        });
+        binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvTimeline.setAdapter(adapter);
+
+        viewModel.observarAtencionesOdo(pacienteLocalId).observe(this, atenciones -> {
+            adapter.setAtenciones(atenciones);
+            binding.tvSinAtenciones.setVisibility(atenciones == null || atenciones.isEmpty() ? View.VISIBLE : View.GONE);
+        });
+
+        viewModel.observarCatalogoOdo().observe(this, adapter::setCatalogoPrestaciones);
+        viewModel.getDiagnosticos().observe(this, adapter::setDiagnosticos);
+
+        binding.btnNuevaAtencion.setOnClickListener(v -> {
+            Intent intent = new Intent(this, RegistrarAtencionOdontologiaActivity.class);
+            intent.putExtra(RegistrarAtencionOdontologiaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
             startActivity(intent);
         });
     }

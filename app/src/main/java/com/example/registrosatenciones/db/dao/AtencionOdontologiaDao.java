@@ -10,6 +10,7 @@ import androidx.room.Update;
 import com.example.registrosatenciones.db.entity.AtencionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.OdontogramaEstadoEntity;
 import com.example.registrosatenciones.db.entity.PrestacionOdontologiaEntity;
+import com.example.registrosatenciones.db.relation.AtencionOdontologiaConDetalle;
 
 import java.util.List;
 
@@ -59,4 +60,16 @@ public interface AtencionOdontologiaDao {
             "WHERE syncState = :estado AND institucionIdCaptura = :institucionId " +
             "ORDER BY fechaRegistroLocal DESC")
     LiveData<List<AtencionOdontologiaEntity>> observarPorEstadoEInstitucion(int estado, int institucionId);
+
+    // Timeline de la ficha (offline). Ordena por fecha de captura, más nueva primero.
+    @Transaction
+    @Query("SELECT * FROM atenciones_odontologia " +
+            "WHERE pacienteLocalId = :pacienteLocalId " +
+            "ORDER BY fechaRegistroLocal DESC")
+    LiveData<List<AtencionOdontologiaConDetalle>> observarPorPaciente(long pacienteLocalId);
+
+    // Detalle histórico (solo lectura), 100% local — no requiere conexión.
+    @Transaction
+    @Query("SELECT * FROM atenciones_odontologia WHERE localId = :atencionLocalId")
+    LiveData<AtencionOdontologiaConDetalle> observarPorLocalId(long atencionLocalId);
 }

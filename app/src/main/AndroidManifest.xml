@@ -64,6 +64,10 @@
             android:name=".ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.detalleatencionodontologia.DetalleAtencionOdontologiaActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
