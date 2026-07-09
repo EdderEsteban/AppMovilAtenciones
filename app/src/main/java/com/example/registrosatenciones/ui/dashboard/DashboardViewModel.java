@@ -45,7 +45,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
         // Autoreparación: si la descarga del catálogo falló al loguear (mala señal, etc.),
         // se reintenta solo cada vez que se visita Inicio, sin que el usuario tenga que hacer nada.
-        CatalogoSync.descargarTiposPrestacionEnfermeria(context);
+        CatalogoSync.descargarCatalogosSegunRol(context);
 
         ApiClient.getApiAtenciones().obtenerDashboard(token).enqueue(new Callback<DashboardResponse>() {
             @Override

@@ -94,7 +94,7 @@ public class SeleccionInstitucionViewModel extends AndroidViewModel {
 
         String nombreInstitucion = buscarNombreInstitucion(body.getInstitucionActivaId(), body.getInstituciones());
         PreferenciasUsuario.guardarInstitucionActiva(context, body.getInstitucionActivaId(), nombreInstitucion);
-        com.example.registrosatenciones.util.CatalogoSync.descargarTiposPrestacionEnfermeria(context);
+        com.example.registrosatenciones.util.CatalogoSync.descargarCatalogosSegunRol(context);
 
         Intent intent = new Intent(context, InicioActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
