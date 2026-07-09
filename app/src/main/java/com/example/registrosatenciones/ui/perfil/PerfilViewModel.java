@@ -117,6 +117,7 @@ public class PerfilViewModel extends AndroidViewModel {
 
         Intent intent = new Intent(context, SeleccionInstitucionActivity.class);
         intent.putExtra("instituciones", (Serializable) instituciones);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
     }
 
