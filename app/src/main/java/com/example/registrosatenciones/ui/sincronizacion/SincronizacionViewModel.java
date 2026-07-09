@@ -13,13 +13,19 @@ import androidx.lifecycle.MutableLiveData;
 import com.example.registrosatenciones.db.AppDatabase;
 import com.example.registrosatenciones.db.SyncEstado;
 import com.example.registrosatenciones.db.dao.AtencionEnfermeriaDao;
+import com.example.registrosatenciones.db.dao.AtencionOdontologiaDao;
 import com.example.registrosatenciones.db.dao.PacienteDao;
 import com.example.registrosatenciones.db.entity.AtencionEnfermeriaEntity;
+import com.example.registrosatenciones.db.entity.AtencionOdontologiaEntity;
+import com.example.registrosatenciones.db.entity.OdontogramaEstadoEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.db.entity.PrestacionEnfermeriaEntity;
+import com.example.registrosatenciones.db.entity.PrestacionOdontologiaEntity;
 import com.example.registrosatenciones.request.ApiClient;
 import com.example.registrosatenciones.request.CrearAtencionEnfermeriaRequest;
+import com.example.registrosatenciones.request.CrearAtencionOdontologiaRequest;
 import com.example.registrosatenciones.request.CrearPacienteRequest;
+import com.example.registrosatenciones.request.OdontogramaEstadoItemRequest;
 import com.example.registrosatenciones.request.PrestacionItemRequest;
 import com.example.registrosatenciones.response.CrearAtencionResponse;
 import com.example.registrosatenciones.response.CrearPacienteResponse;
@@ -40,6 +46,7 @@ public class SincronizacionViewModel extends AndroidViewModel {
     private final Context context;
     private final PacienteDao pacienteDao;
     private final AtencionEnfermeriaDao atencionDao;
+    private final AtencionOdontologiaDao atencionOdoDao;
 
     private final MutableLiveData<Boolean> sincronizando = new MutableLiveData<>(false);
 
@@ -49,6 +56,7 @@ public class SincronizacionViewModel extends AndroidViewModel {
         AppDatabase db = AppDatabase.getInstancia(context);
         pacienteDao = db.pacienteDao();
         atencionDao = db.atencionEnfermeriaDao();
+        atencionOdoDao = db.atencionOdontologiaDao();
     }
 
     public LiveData<List<PacienteEntity>> observarPacientesPendientes() {
@@ -67,6 +75,16 @@ public class SincronizacionViewModel extends AndroidViewModel {
     public LiveData<List<AtencionEnfermeriaEntity>> observarAtencionesConError() {
         int institucionActiva = PreferenciasUsuario.getInstitucionActivaId(context);
         return atencionDao.observarPorEstadoEInstitucion(SyncEstado.ERROR, institucionActiva);
+    }
+
+    public LiveData<List<AtencionOdontologiaEntity>> observarAtencionesOdoPendientes() {
+        int institucionActiva = PreferenciasUsuario.getInstitucionActivaId(context);
+        return atencionOdoDao.observarPorEstadoEInstitucion(SyncEstado.PENDIENTE, institucionActiva);
+    }
+
+    public LiveData<List<AtencionOdontologiaEntity>> observarAtencionesOdoConError() {
+        int institucionActiva = PreferenciasUsuario.getInstitucionActivaId(context);
+        return atencionOdoDao.observarPorEstadoEInstitucion(SyncEstado.ERROR, institucionActiva);
     }
 
     public LiveData<Boolean> getSincronizando() {
@@ -102,6 +120,18 @@ public class SincronizacionViewModel extends AndroidViewModel {
                 continue; // corresponde a otra institución; se sincroniza cuando el usuario vuelva ahí
             }
             boolean sesionValida = sincronizarAtencion(atencion, token);
+            if (!sesionValida) {
+                finalizarSincronizacion();
+                return;
+            }
+        }
+
+        List<AtencionOdontologiaEntity> atencionesOdoPendientes = atencionOdoDao.listarPorEstado(SyncEstado.PENDIENTE);
+        for (AtencionOdontologiaEntity atencion : atencionesOdoPendientes) {
+            if (atencion.getInstitucionIdCaptura() != institucionActiva) {
+                continue; // corresponde a otra institución; se sincroniza cuando el usuario vuelva ahí
+            }
+            boolean sesionValida = sincronizarAtencionOdo(atencion, token);
             if (!sesionValida) {
                 finalizarSincronizacion();
                 return;
@@ -208,12 +238,71 @@ public class SincronizacionViewModel extends AndroidViewModel {
         }
     }
 
+    // Devuelve false si la sesión perdió la institución (409): no tiene sentido seguir intentando.
+    private boolean sincronizarAtencionOdo(AtencionOdontologiaEntity atencion, String token) {
+        PacienteEntity paciente = pacienteDao.obtenerPorLocalId(atencion.getPacienteLocalId());
+        if (paciente == null || paciente.getServerId() == null) {
+            return true; // el paciente todavía no se sincronizó; se reintenta la próxima vez
+        }
+
+        List<PrestacionOdontologiaEntity> prestacionesLocales = atencionOdoDao.prestacionesDe(atencion.getLocalId());
+        List<PrestacionItemRequest> prestaciones = new ArrayList<>();
+        for (PrestacionOdontologiaEntity p : prestacionesLocales) {
+            prestaciones.add(new PrestacionItemRequest(p.getTipoPrestacionId(), p.getCantidad()));
+        }
+
+        List<OdontogramaEstadoEntity> estadosLocales = atencionOdoDao.estadosDe(atencion.getLocalId());
+        List<OdontogramaEstadoItemRequest> odontograma = new ArrayList<>();
+        for (OdontogramaEstadoEntity e : estadosLocales) {
+            odontograma.add(new OdontogramaEstadoItemRequest(e.getNumeroDiente(), e.getSuperficie(), e.getEstado()));
+        }
+
+        CrearAtencionOdontologiaRequest request = new CrearAtencionOdontologiaRequest();
+        request.setPacienteId(paciente.getServerId());
+        request.setTipoConsulta(atencion.getTipoConsulta());
+        request.setTipoTurno(atencion.getTipoTurno());
+        request.setDiagnosticoId(atencion.getDiagnosticoId());
+        request.setEmbarazada(atencion.isEmbarazada());
+        request.setSinObraSocial(atencion.isSinObraSocial());
+        request.setNuevaObraSocial(atencion.getNuevaObraSocial());
+        request.setObservaciones(atencion.getObservaciones());
+        request.setPrestaciones(prestaciones);
+        request.setOdontograma(odontograma);
+
+        try {
+            Response<CrearAtencionResponse> respuesta =
+                    ApiClient.getApiAtenciones().crearAtencionOdontologia(token, request).execute();
+
+            if (respuesta.isSuccessful() && respuesta.body() != null) {
+                atencion.setServerId(respuesta.body().getId());
+                atencion.setSyncState(SyncEstado.SINCRONIZADO);
+                atencionOdoDao.actualizar(atencion);
+            } else if (respuesta.code() == 409) {
+                AppExecutors.ejecutarEnUI(this::irALoginPorConflicto);
+                return false;
+            } else if (respuesta.code() == 400) {
+                marcarError(atencionOdoDao, atencion); // error de negocio — no se resuelve reintentando
+            }
+            // otros códigos: queda PENDIENTE y se reintenta la próxima vez
+
+            return true;
+
+        } catch (IOException e) {
+            return true; // sin conexión a mitad de camino: queda PENDIENTE
+        }
+    }
+
     private void marcarError(PacienteDao dao, PacienteEntity paciente) {
         paciente.setSyncState(SyncEstado.ERROR);
         dao.actualizar(paciente);
     }
 
     private void marcarError(AtencionEnfermeriaDao dao, AtencionEnfermeriaEntity atencion) {
+        atencion.setSyncState(SyncEstado.ERROR);
+        dao.actualizar(atencion);
+    }
+
+    private void marcarError(AtencionOdontologiaDao dao, AtencionOdontologiaEntity atencion) {
         atencion.setSyncState(SyncEstado.ERROR);
         dao.actualizar(atencion);
     }

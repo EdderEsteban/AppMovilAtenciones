@@ -11,6 +11,7 @@ import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.adapters.PendienteAdapter;
 import com.example.registrosatenciones.databinding.ActivitySincronizacionBinding;
 import com.example.registrosatenciones.db.entity.AtencionEnfermeriaEntity;
+import com.example.registrosatenciones.db.entity.AtencionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.ui.common.NavegacionInferiorActivity;
 import com.example.registrosatenciones.util.Conectividad;
@@ -28,6 +29,8 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
     private List<PacienteEntity> pacientesConError = new ArrayList<>();
     private List<AtencionEnfermeriaEntity> atencionesPendientes = new ArrayList<>();
     private List<AtencionEnfermeriaEntity> atencionesConError = new ArrayList<>();
+    private List<AtencionOdontologiaEntity> atencionesOdoPendientes = new ArrayList<>();
+    private List<AtencionOdontologiaEntity> atencionesOdoConError = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +61,16 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
 
         viewModel.observarAtencionesConError().observe(this, lista -> {
             atencionesConError = lista;
+            actualizarLista();
+        });
+
+        viewModel.observarAtencionesOdoPendientes().observe(this, lista -> {
+            atencionesOdoPendientes = lista;
+            actualizarLista();
+        });
+
+        viewModel.observarAtencionesOdoConError().observe(this, lista -> {
+            atencionesOdoConError = lista;
             actualizarLista();
         });
 
@@ -96,8 +109,8 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
 
     private void actualizarEstado() {
         boolean online = Conectividad.hayConexion(this);
-        int totalPendientes = pacientesPendientes.size() + atencionesPendientes.size();
-        int totalError = pacientesConError.size() + atencionesConError.size();
+        int totalPendientes = pacientesPendientes.size() + atencionesPendientes.size() + atencionesOdoPendientes.size();
+        int totalError = pacientesConError.size() + atencionesConError.size() + atencionesOdoConError.size();
 
         if (Boolean.TRUE.equals(viewModel.getSincronizando().getValue())) {
             binding.tvEstado.setText("Sincronizando...");
@@ -124,12 +137,20 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
             String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
             items.add(new ItemPendiente("Atención · " + tipo, "No se pudo guardar — revisá los datos", true));
         }
+        for (AtencionOdontologiaEntity a : atencionesOdoConError) {
+            String tipo = a.getTipoConsulta() == 1 ? "1ª vez" : "Ulterior";
+            items.add(new ItemPendiente("Atención odont. · " + tipo, "No se pudo guardar — revisá los datos", true));
+        }
         for (PacienteEntity p : pacientesPendientes) {
             items.add(new ItemPendiente(p.getApellido() + ", " + p.getNombre(), "Paciente nuevo · se buscará por DNI", false));
         }
         for (AtencionEnfermeriaEntity a : atencionesPendientes) {
             String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
             items.add(new ItemPendiente("Atención · " + tipo, a.getFechaRegistroLocal(), false));
+        }
+        for (AtencionOdontologiaEntity a : atencionesOdoPendientes) {
+            String tipo = a.getTipoConsulta() == 1 ? "1ª vez" : "Ulterior";
+            items.add(new ItemPendiente("Atención odont. · " + tipo, a.getFechaRegistroLocal(), false));
         }
 
         adapter.setItems(items);
