@@ -5,6 +5,7 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -88,6 +89,17 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             viewModel.guardarAtencion(pacienteLocalId, tipoAtencion, embarazada, sinObraSocial,
                     observaciones, nuevaObraSocial, obtenerPrestacionesSeleccionadas());
         });
+
+        binding.btnCancelar.setOnClickListener(v -> confirmarCancelar());
+    }
+
+    private void confirmarCancelar() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Cancelar el registro?")
+                .setMessage("Se va a perder lo que cargaste en esta atención.")
+                .setPositiveButton("Sí, cancelar", (dialog, which) -> finish())
+                .setNegativeButton("Seguir cargando", null)
+                .show();
     }
 
     private void actualizarVisibilidadNuevaObraSocial() {

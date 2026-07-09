@@ -148,6 +148,17 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
             viewModel.guardarAtencion(pacienteLocalId, tipoConsulta, turnoSeleccionado, diagnosticoSeleccionadoId,
                     embarazada, sinObraSocial, nuevaObraSocial, observaciones, obtenerPrestacionesSeleccionadas());
         });
+
+        binding.btnCancelar.setOnClickListener(v -> confirmarCancelar());
+    }
+
+    private void confirmarCancelar() {
+        new AlertDialog.Builder(this)
+                .setTitle("¿Cancelar el registro?")
+                .setMessage("Se va a perder lo que cargaste en esta atención, incluido el odontograma.")
+                .setPositiveButton("Sí, cancelar", (dialog, which) -> finish())
+                .setNegativeButton("Seguir cargando", null)
+                .show();
     }
 
     private void abrirEditorCuadrante(int cuadrante) {

@@ -72,6 +72,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPrimeraVez"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -80,6 +81,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnUlterior"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -405,6 +407,15 @@
             android:paddingBottom="14dp"
             android:text="Guardar atención"
             android:textSize="16sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelar"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Cancelar"
+            android:textColor="@color/color_error" />
 
     </LinearLayout>
 </ScrollView>
