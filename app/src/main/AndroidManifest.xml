@@ -56,6 +56,10 @@
             android:name=".ui.perfil.PerfilActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.odontologia.EditorCuadranteActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -20,4 +20,18 @@
     <color name="color_pending_bg">#FCF1DC</color>
     <color name="color_error">#C7452F</color>
     <color name="color_error_bg">#FBEAE6</color>
+
+    <!-- Paleta clínica del odontograma — calcada de odontograma.css del panel .NET,
+         no cambia entre temas claro/oscuro (igual que en la web). -->
+    <color name="odonto_caries">#EF4444</color>
+    <color name="odonto_caries_borde">#DC2626</color>
+    <color name="odonto_obturado">#3B82F6</color>
+    <color name="odonto_obturado_borde">#2563EB</color>
+    <color name="odonto_corona">#F59E0B</color>
+    <color name="odonto_corona_borde">#D97706</color>
+    <color name="odonto_ausente">#9CA3AF</color>
+    <color name="odonto_ausente_borde">#6B7280</color>
+    <color name="odonto_extraccion_bg">#E5E7EB</color>
+    <color name="odonto_extraccion_x">#DC2626</color>
+    <color name="odonto_activo">#8B5CF6</color>
 </resources>
