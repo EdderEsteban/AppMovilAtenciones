@@ -55,8 +55,7 @@ public class OdontogramaView extends View {
     private static final float CELDA_MINIMA_DP = 30f;
 
     private OdontogramaModelo modelo = new OdontogramaModelo();
-    private int[] permanentes = new int[0];
-    private int[] temporarios = new int[0];
+    private List<int[]> filasDientes = new ArrayList<>();
     private boolean editable = false;
     private int dienteActivo = -1;
 
@@ -106,9 +105,17 @@ public class OdontogramaView extends View {
         invalidate();
     }
 
+    // Modo cuadrante: 2 filas (temporarios arriba, permanentes abajo — igual que la web).
     public void setDientes(int[] permanentes, int[] temporarios) {
-        this.permanentes = permanentes != null ? permanentes : new int[0];
-        this.temporarios = temporarios != null ? temporarios : new int[0];
+        List<int[]> filas = new ArrayList<>();
+        if (temporarios != null && temporarios.length > 0) filas.add(temporarios);
+        if (permanentes != null && permanentes.length > 0) filas.add(permanentes);
+        setFilas(filas);
+    }
+
+    // Modo resumen/histórico: N filas arbitrarias (odontograma completo = 4 filas anatómicas).
+    public void setFilas(List<int[]> filas) {
+        this.filasDientes = filas != null ? filas : new ArrayList<>();
         requestLayout();
         invalidate();
     }
@@ -149,7 +156,10 @@ public class OdontogramaView extends View {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int anchoDisponible = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
 
-        int maxDientesPorFila = Math.max(temporarios.length, permanentes.length);
+        int maxDientesPorFila = 0;
+        for (int[] fila : filasDientes) {
+            maxDientesPorFila = Math.max(maxDientesPorFila, fila.length);
+        }
         float celda = maxDientesPorFila > 0
                 ? (anchoDisponible - dp(GAP_DP) * (maxDientesPorFila - 1)) / maxDientesPorFila
                 : dp(CELDA_MINIMA_DP);
@@ -158,22 +168,16 @@ public class OdontogramaView extends View {
 
         filas.clear();
         float y = getPaddingTop();
-        if (temporarios.length > 0) {
+        for (int[] dientes : filasDientes) {
+            if (dientes.length == 0) continue;
             Fila f = new Fila();
-            f.dientes = temporarios;
+            f.dientes = dientes;
             f.topY = y;
             f.cellTop = y + dp(LABEL_ALTO_DP);
             filas.add(f);
             y = f.cellTop + cellSize + dp(FILA_GAP_DP);
         }
-        if (permanentes.length > 0) {
-            Fila f = new Fila();
-            f.dientes = permanentes;
-            f.topY = y;
-            f.cellTop = y + dp(LABEL_ALTO_DP);
-            filas.add(f);
-            y = f.cellTop + cellSize;
-        } else if (!filas.isEmpty()) {
+        if (!filas.isEmpty()) {
             y -= dp(FILA_GAP_DP);
         }
 

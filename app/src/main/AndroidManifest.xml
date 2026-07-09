@@ -60,6 +60,10 @@
             android:name=".ui.odontologia.EditorCuadranteActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
