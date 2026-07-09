@@ -1,13 +1,16 @@
 package com.example.registrosatenciones.request;
 
 import com.example.registrosatenciones.response.AtencionEnfermeriaDetalleResponse;
+import com.example.registrosatenciones.response.AtencionOdontologiaDetalleResponse;
 import com.example.registrosatenciones.response.CrearAtencionResponse;
 import com.example.registrosatenciones.response.CrearPacienteResponse;
 import com.example.registrosatenciones.response.DashboardResponse;
+import com.example.registrosatenciones.response.DiagnosticoResponse;
 import com.example.registrosatenciones.response.ErrorResponse;
 import com.example.registrosatenciones.response.LoginResponse;
 import com.example.registrosatenciones.response.PacienteDetalleResponse;
 import com.example.registrosatenciones.response.PacienteResponse;
+import com.example.registrosatenciones.response.TipoPrestacionOdontologiaResponse;
 import com.example.registrosatenciones.response.TipoPrestacionResponse;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -106,5 +109,23 @@ public class ApiClient {
         @PUT("auth/perfil")
         Call<LoginResponse> actualizarPerfil(@Header("Authorization") String token,
                                               @Body ActualizarPerfilRequest request);
+
+        // Metodo TiposPrestacionOdontologia (catálogo)
+        @GET("atenciones-odontologia/tipos-prestacion")
+        Call<List<TipoPrestacionOdontologiaResponse>> obtenerTiposPrestacionOdontologia(@Header("Authorization") String token);
+
+        // Metodo Diagnosticos (catálogo)
+        @GET("atenciones-odontologia/diagnosticos")
+        Call<List<DiagnosticoResponse>> obtenerDiagnosticos(@Header("Authorization") String token);
+
+        // Metodo CrearAtencionOdontologia
+        @POST("atenciones-odontologia")
+        Call<CrearAtencionResponse> crearAtencionOdontologia(@Header("Authorization") String token,
+                                                              @Body CrearAtencionOdontologiaRequest request);
+
+        // Metodo ObtenerAtencionOdontologia (detalle)
+        @GET("atenciones-odontologia/{id}")
+        Call<AtencionOdontologiaDetalleResponse> obtenerAtencionOdontologia(@Header("Authorization") String token,
+                                                                             @Path("id") int id);
     }
 }
