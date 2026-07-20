@@ -41,8 +41,6 @@ El personal de salud (enfermeros y odontólogos) que atiende en centros con cone
 - **Sincronización**: dispara en primer plano (al abrir la pantalla de Sincronización o al recuperar conexión), corriendo en un `ExecutorService` de fondo — deliberadamente **sin WorkManager** ni tareas en segundo plano.
 - **UI**: ViewBinding (sin `findViewById`), Material Components 3, `RecyclerView` con adapters estándar.
 
-Documentación de diseño completa (specs y planes de implementación) en [`docs/superpowers/`](docs/superpowers/).
-
 ## Stack tecnológico
 
 | Capa | Tecnología |
