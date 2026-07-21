@@ -182,7 +182,24 @@ public class OdontogramaView extends View {
         }
 
         float alto = y + getPaddingBottom();
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (int) alto);
+
+        // Ancho real que ocupa la fila más ancha (celdas + separaciones + padding).
+        int anchoContenido = getPaddingLeft() + getPaddingRight();
+        if (maxDientesPorFila > 0) {
+            anchoContenido += Math.round(maxDientesPorFila * cellSize
+                    + (maxDientesPorFila - 1) * dp(GAP_DP));
+        }
+
+        setMeasuredDimension(MedidorAnchoOdontograma.anchoMedido(modoSimple(widthMeasureSpec),
+                MeasureSpec.getSize(widthMeasureSpec), anchoContenido), (int) alto);
+    }
+
+    private static int modoSimple(int measureSpec) {
+        switch (MeasureSpec.getMode(measureSpec)) {
+            case MeasureSpec.EXACTLY: return MedidorAnchoOdontograma.MODO_EXACTO;
+            case MeasureSpec.AT_MOST: return MedidorAnchoOdontograma.MODO_MAXIMO;
+            default:                  return MedidorAnchoOdontograma.MODO_LIBRE;
+        }
     }
 
     @Override
