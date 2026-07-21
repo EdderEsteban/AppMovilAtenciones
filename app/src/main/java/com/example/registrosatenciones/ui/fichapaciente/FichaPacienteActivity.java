@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.registrosatenciones.adapters.TimelineAtencionesAdapter;
 import com.example.registrosatenciones.adapters.TimelineOdontologiaAdapter;
 import com.example.registrosatenciones.databinding.ActivityFichaPacienteBinding;
+import com.example.registrosatenciones.ui.detalleatencionenfermeria.DetalleAtencionEnfermeriaActivity;
 import com.example.registrosatenciones.ui.detalleatencionodontologia.DetalleAtencionOdontologiaActivity;
 import com.example.registrosatenciones.ui.registraratencion.RegistrarAtencionActivity;
 import com.example.registrosatenciones.ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity;
@@ -51,7 +52,12 @@ public class FichaPacienteActivity extends AppCompatActivity {
     }
 
     private void configurarTimelineEnfermeria() {
-        TimelineAtencionesAdapter adapter = new TimelineAtencionesAdapter(this);
+        TimelineAtencionesAdapter adapter = new TimelineAtencionesAdapter(this, atencion -> {
+            Intent intent = new Intent(this, DetalleAtencionEnfermeriaActivity.class);
+            intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_ATENCION_LOCAL_ID, atencion.getAtencion().getLocalId());
+            intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+            startActivity(intent);
+        });
         binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
         binding.rvTimeline.setAdapter(adapter);
 

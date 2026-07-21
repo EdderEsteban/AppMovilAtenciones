@@ -44,6 +44,11 @@ public interface AtencionEnfermeriaDao {
             "ORDER BY fechaRegistroLocal DESC")
     LiveData<List<AtencionConPrestaciones>> observarPorPaciente(long pacienteLocalId);
 
+    // Detalle histórico (solo lectura), 100% local — no requiere conexión.
+    @Transaction
+    @Query("SELECT * FROM atenciones_enfermeria WHERE localId = :atencionLocalId")
+    LiveData<AtencionConPrestaciones> observarPorLocalId(long atencionLocalId);
+
     // Para el sync (sincrónicas, en background)
     @Query("SELECT * FROM atenciones_enfermeria WHERE syncState = :estado")
     List<AtencionEnfermeriaEntity> listarPorEstado(int estado);

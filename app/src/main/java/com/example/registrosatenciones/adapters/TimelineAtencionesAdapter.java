@@ -14,6 +14,7 @@ import com.example.registrosatenciones.db.SyncEstado;
 import com.example.registrosatenciones.db.entity.PrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.relation.AtencionConPrestaciones;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
@@ -24,12 +25,18 @@ import java.util.Map;
 
 public class TimelineAtencionesAdapter extends RecyclerView.Adapter<TimelineAtencionesAdapter.TimelineViewHolder> {
 
+    public interface OnAtencionClickListener {
+        void onClick(AtencionConPrestaciones atencion);
+    }
+
     private final Context context;
+    private final OnAtencionClickListener listener;
     private List<AtencionConPrestaciones> atenciones = new ArrayList<>();
     private Map<Integer, String> nombresPrestaciones = new HashMap<>();
 
-    public TimelineAtencionesAdapter(Context context) {
+    public TimelineAtencionesAdapter(Context context, OnAtencionClickListener listener) {
         this.context = context;
+        this.listener = listener;
     }
 
     public void setAtenciones(List<AtencionConPrestaciones> atenciones) {
@@ -75,6 +82,8 @@ public class TimelineAtencionesAdapter extends RecyclerView.Adapter<TimelineAten
             chip.setTextSize(10.5f);
             holder.chipGroupPrestaciones.addView(chip);
         }
+
+        holder.cardAtencion.setOnClickListener(v -> listener.onClick(item));
     }
 
     @Override
@@ -87,6 +96,7 @@ public class TimelineAtencionesAdapter extends RecyclerView.Adapter<TimelineAten
         private final TextView chipPendiente;
         private final TextView tvTipoAtencion;
         private final ChipGroup chipGroupPrestaciones;
+        private final MaterialCardView cardAtencion;
 
         public TimelineViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -94,6 +104,7 @@ public class TimelineAtencionesAdapter extends RecyclerView.Adapter<TimelineAten
             chipPendiente = itemView.findViewById(R.id.chipPendiente);
             tvTipoAtencion = itemView.findViewById(R.id.tvTipoAtencion);
             chipGroupPrestaciones = itemView.findViewById(R.id.chipGroupPrestaciones);
+            cardAtencion = itemView.findViewById(R.id.cardAtencion);
         }
     }
 }

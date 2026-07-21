@@ -68,6 +68,10 @@
             android:name=".ui.detalleatencionodontologia.DetalleAtencionOdontologiaActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.detalleatencionenfermeria.DetalleAtencionEnfermeriaActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
