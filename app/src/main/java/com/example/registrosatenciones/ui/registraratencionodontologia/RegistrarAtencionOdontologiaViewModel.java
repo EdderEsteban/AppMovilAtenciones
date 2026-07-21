@@ -98,6 +98,25 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
         odontogramaActualizado.setValue(true);
     }
 
+    // Precarga el odontograma de la última atención del paciente al abrir una atención nueva
+    // (igual que el GET Create de la web): el odontólogo modifica sobre el histórico.
+    public void precargarUltimoOdontograma(long pacienteLocalId) {
+        AppExecutors.io().execute(() -> {
+            List<OdontogramaEstadoEntity> estados = atencionDao.estadosDelUltimoOdontograma(pacienteLocalId);
+            List<OdontogramaItem> items = new ArrayList<>();
+            for (OdontogramaEstadoEntity e : estados) {
+                items.add(new OdontogramaItem(e.getNumeroDiente(), e.getSuperficie(), e.getEstado()));
+            }
+            AppExecutors.ejecutarEnUI(() -> {
+                // No pisar si no hay histórico o si el usuario ya empezó a editar.
+                if (items.isEmpty() || !modelo.aplanar().isEmpty()) return;
+                modelo.cargar(items);
+                cpo.setValue(modelo.calcularCpo());
+                odontogramaActualizado.setValue(true);
+            });
+        });
+    }
+
     public void guardarAtencion(long pacienteLocalId, int tipoConsulta, Integer tipoTurno, Integer diagnosticoId,
                                  boolean embarazada, boolean sinObraSocial, String nuevaObraSocial,
                                  String observaciones, List<PrestacionOdontologiaEntity> prestaciones) {

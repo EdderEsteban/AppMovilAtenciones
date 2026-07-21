@@ -75,6 +75,9 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
                 DientesFdi.TEMPORARIOS_SUPERIOR, DientesFdi.TEMPORARIOS_INFERIOR,
                 DientesFdi.PERMANENTES_SUPERIOR, DientesFdi.PERMANENTES_INFERIOR));
 
+        // Arranca la atención nueva con el último odontograma del paciente (no en blanco).
+        viewModel.precargarUltimoOdontograma(pacienteLocalId);
+
         ArrayAdapter<String> turnoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, TURNO_LABELS);
         binding.actvTipoTurno.setAdapter(turnoAdapter);
         binding.actvTipoTurno.setOnItemClickListener((parent, v, position, id) -> turnoSeleccionado = TURNO_CODIGOS[position]);
