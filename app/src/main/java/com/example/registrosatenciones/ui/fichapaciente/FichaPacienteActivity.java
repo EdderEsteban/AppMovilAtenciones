@@ -3,16 +3,20 @@ package com.example.registrosatenciones.ui.fichapaciente;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.registrosatenciones.adapters.TimelineAtencionesAdapter;
+import com.example.registrosatenciones.adapters.TimelineHistoriaAdapter;
 import com.example.registrosatenciones.adapters.TimelineOdontologiaAdapter;
 import com.example.registrosatenciones.databinding.ActivityFichaPacienteBinding;
 import com.example.registrosatenciones.ui.detalleatencionenfermeria.DetalleAtencionEnfermeriaActivity;
 import com.example.registrosatenciones.ui.detalleatencionodontologia.DetalleAtencionOdontologiaActivity;
+import com.example.registrosatenciones.ui.historiaclinica.DecisorModoHistoria;
+import com.example.registrosatenciones.ui.historiaclinica.ModoHistoria;
 import com.example.registrosatenciones.ui.registraratencion.RegistrarAtencionActivity;
 import com.example.registrosatenciones.ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity;
 
@@ -23,6 +27,7 @@ public class FichaPacienteActivity extends AppCompatActivity {
     private ActivityFichaPacienteBinding binding;
     private FichaPacienteViewModel viewModel;
     private long pacienteLocalId;
+    private boolean timelineConfigurado = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,13 +47,57 @@ public class FichaPacienteActivity extends AppCompatActivity {
             if (paciente.getEdad() != null) detalle.append(" · ").append(paciente.getEdad()).append(" años");
             if (paciente.getSexo() != null) detalle.append(" · ").append(paciente.getSexo());
             binding.tvDetallePaciente.setText(detalle.toString());
+
+            if (!timelineConfigurado) {
+                timelineConfigurado = true;
+                ModoHistoria modo = DecisorModoHistoria.decidir(viewModel.hayConexion(), paciente.getServerId());
+                if (modo == ModoHistoria.ONLINE) {
+                    configurarTimelineOnline(paciente.getServerId());
+                } else if (viewModel.esOdontologo()) {
+                    configurarTimelineOdontologia();
+                } else {
+                    configurarTimelineEnfermeria();
+                }
+                configurarBotonNuevaAtencion();
+            }
+        });
+    }
+
+    private void configurarTimelineOnline(int serverId) {
+        binding.tvModoHistoria.setText("Historia clínica completa · todos los centros");
+        binding.tvModoHistoria.setVisibility(View.VISIBLE);
+
+        TimelineHistoriaAdapter adapter = new TimelineHistoriaAdapter(this, item -> {
+            Intent intent;
+            if (item.esOdontologia()) {
+                intent = new Intent(this, DetalleAtencionOdontologiaActivity.class);
+                int serverIdItem = item.getServerId();
+                intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_ATENCION_SERVER_ID, serverIdItem);
+                intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+            } else {
+                intent = new Intent(this, DetalleAtencionEnfermeriaActivity.class);
+                int serverIdItem = item.getServerId();
+                intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_ATENCION_SERVER_ID, serverIdItem);
+                intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+            }
+            startActivity(intent);
+        });
+        binding.rvTimeline.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvTimeline.setAdapter(adapter);
+
+        viewModel.getHistoriaOnline().observe(this, items -> {
+            adapter.setItems(items);
+            binding.tvSinAtenciones.setVisibility(items == null || items.isEmpty() ? View.VISIBLE : View.GONE);
+        });
+        viewModel.getErrorOnline().observe(this, error -> {
+            if (error != null && error) {
+                Toast.makeText(this, "No se pudo traer la HC completa, mostrando lo local", Toast.LENGTH_LONG).show();
+                binding.tvModoHistoria.setText("Sin conexión · registros de este dispositivo");
+                if (viewModel.esOdontologo()) configurarTimelineOdontologia(); else configurarTimelineEnfermeria();
+            }
         });
 
-        if (viewModel.esOdontologo()) {
-            configurarTimelineOdontologia();
-        } else {
-            configurarTimelineEnfermeria();
-        }
+        viewModel.cargarHistoriaOnline(serverId);
     }
 
     private void configurarTimelineEnfermeria() {
@@ -67,12 +116,6 @@ public class FichaPacienteActivity extends AppCompatActivity {
         });
 
         viewModel.observarCatalogo().observe(this, adapter::setCatalogo);
-
-        binding.btnNuevaAtencion.setOnClickListener(v -> {
-            Intent intent = new Intent(this, RegistrarAtencionActivity.class);
-            intent.putExtra(RegistrarAtencionActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
-            startActivity(intent);
-        });
     }
 
     private void configurarTimelineOdontologia() {
@@ -92,10 +135,14 @@ public class FichaPacienteActivity extends AppCompatActivity {
 
         viewModel.observarCatalogoOdo().observe(this, adapter::setCatalogoPrestaciones);
         viewModel.getDiagnosticos().observe(this, adapter::setDiagnosticos);
+    }
 
+    private void configurarBotonNuevaAtencion() {
         binding.btnNuevaAtencion.setOnClickListener(v -> {
-            Intent intent = new Intent(this, RegistrarAtencionOdontologiaActivity.class);
-            intent.putExtra(RegistrarAtencionOdontologiaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+            Intent intent = viewModel.esOdontologo()
+                    ? new Intent(this, RegistrarAtencionOdontologiaActivity.class)
+                    : new Intent(this, RegistrarAtencionActivity.class);
+            intent.putExtra(RegistrarAtencionActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
             startActivity(intent);
         });
     }
