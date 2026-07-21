@@ -17,12 +17,20 @@ import com.example.registrosatenciones.db.entity.DiagnosticoEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.relation.AtencionOdontologiaConDetalle;
+import com.example.registrosatenciones.request.ApiClient;
+import com.example.registrosatenciones.response.AtencionOdontologiaDetalleResponse;
 import com.example.registrosatenciones.util.AppExecutors;
+import com.example.registrosatenciones.util.PreferenciasUsuario;
 
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
 
+    private final Context contexto;
     private final PacienteDao pacienteDao;
     private final AtencionOdontologiaDao atencionDao;
     private final TipoPrestacionOdontologiaDao tipoPrestacionDao;
@@ -30,11 +38,13 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
 
     private final MutableLiveData<List<TipoPrestacionOdontologiaEntity>> tiposPrestacion = new MutableLiveData<>();
     private final MutableLiveData<List<DiagnosticoEntity>> diagnosticos = new MutableLiveData<>();
+    private final MutableLiveData<AtencionOdontologiaDetalleResponse> detalleOnline = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> errorOnline = new MutableLiveData<>();
 
     public DetalleAtencionOdontologiaViewModel(@NonNull Application application) {
         super(application);
-        Context context = application.getApplicationContext();
-        AppDatabase db = AppDatabase.getInstancia(context);
+        contexto = application.getApplicationContext();
+        AppDatabase db = AppDatabase.getInstancia(contexto);
         pacienteDao = db.pacienteDao();
         atencionDao = db.atencionOdontologiaDao();
         tipoPrestacionDao = db.tipoPrestacionOdontologiaDao();
@@ -64,5 +74,31 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
 
     public LiveData<List<DiagnosticoEntity>> getDiagnosticos() {
         return diagnosticos;
+    }
+
+    public LiveData<AtencionOdontologiaDetalleResponse> getDetalleOnline() {
+        return detalleOnline;
+    }
+
+    public LiveData<Boolean> getErrorOnline() {
+        return errorOnline;
+    }
+
+    public void cargarOnline(int serverId) {
+        String token = PreferenciasUsuario.getAuthHeader(contexto);
+        ApiClient.getApiAtenciones().obtenerAtencionOdontologia(token, serverId)
+                .enqueue(new Callback<AtencionOdontologiaDetalleResponse>() {
+            @Override public void onResponse(Call<AtencionOdontologiaDetalleResponse> call,
+                                             Response<AtencionOdontologiaDetalleResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    detalleOnline.setValue(response.body());
+                } else {
+                    errorOnline.setValue(true);
+                }
+            }
+            @Override public void onFailure(Call<AtencionOdontologiaDetalleResponse> call, Throwable t) {
+                errorOnline.setValue(true);
+            }
+        });
     }
 }
