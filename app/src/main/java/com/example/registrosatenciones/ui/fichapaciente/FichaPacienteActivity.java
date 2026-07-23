@@ -16,6 +16,7 @@ import com.example.registrosatenciones.databinding.ActivityFichaPacienteBinding;
 import com.example.registrosatenciones.ui.detalleatencionenfermeria.DetalleAtencionEnfermeriaActivity;
 import com.example.registrosatenciones.ui.detalleatencionodontologia.DetalleAtencionOdontologiaActivity;
 import com.example.registrosatenciones.ui.historiaclinica.DecisorModoHistoria;
+import com.example.registrosatenciones.ui.historiaclinica.ItemHistoria;
 import com.example.registrosatenciones.ui.historiaclinica.ModoHistoria;
 import com.example.registrosatenciones.ui.registraratencion.RegistrarAtencionActivity;
 import com.example.registrosatenciones.ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity;
@@ -68,16 +69,23 @@ public class FichaPacienteActivity extends AppCompatActivity {
         binding.tvModoHistoria.setVisibility(View.VISIBLE);
 
         TimelineHistoriaAdapter adapter = new TimelineHistoriaAdapter(this, item -> {
+            boolean esPendienteLocal = item.getFuente() == ItemHistoria.Fuente.LOCAL;
             Intent intent;
             if (item.esOdontologia()) {
                 intent = new Intent(this, DetalleAtencionOdontologiaActivity.class);
-                int serverIdItem = item.getServerId();
-                intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_ATENCION_SERVER_ID, serverIdItem);
+                if (esPendienteLocal) {
+                    intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_ATENCION_LOCAL_ID, item.getLocalId());
+                } else {
+                    intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_ATENCION_SERVER_ID, (int) item.getServerId());
+                }
                 intent.putExtra(DetalleAtencionOdontologiaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
             } else {
                 intent = new Intent(this, DetalleAtencionEnfermeriaActivity.class);
-                int serverIdItem = item.getServerId();
-                intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_ATENCION_SERVER_ID, serverIdItem);
+                if (esPendienteLocal) {
+                    intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_ATENCION_LOCAL_ID, item.getLocalId());
+                } else {
+                    intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_ATENCION_SERVER_ID, (int) item.getServerId());
+                }
                 intent.putExtra(DetalleAtencionEnfermeriaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
             }
             startActivity(intent);
@@ -97,7 +105,7 @@ public class FichaPacienteActivity extends AppCompatActivity {
             }
         });
 
-        viewModel.cargarHistoriaOnline(serverId);
+        viewModel.cargarHistoriaOnline(serverId, pacienteLocalId);
     }
 
     private void configurarTimelineEnfermeria() {

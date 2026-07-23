@@ -56,6 +56,12 @@ public interface AtencionOdontologiaDao {
     @Query("SELECT * FROM odontograma_estados WHERE atencionLocalId = :atencionLocalId")
     List<OdontogramaEstadoEntity> estadosDe(long atencionLocalId);
 
+    // Atenciones de este equipo que todavía no subieron, para sumarlas a la historia online.
+    @Transaction
+    @Query("SELECT * FROM atenciones_odontologia " +
+            "WHERE pacienteLocalId = :pacienteLocalId AND syncState = :estado")
+    List<AtencionOdontologiaConDetalle> pendientesDe(long pacienteLocalId, int estado);
+
     // Estados del odontograma de la ÚLTIMA atención del paciente. Se usa para precargar una
     // atención nueva con lo ya registrado (igual que el GET Create de la web), de modo que el
     // odontólogo modifique sobre el histórico y no arranque de un odontograma en blanco.

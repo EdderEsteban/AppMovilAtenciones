@@ -9,6 +9,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.example.registrosatenciones.db.AppDatabase;
+import com.example.registrosatenciones.db.SyncEstado;
 import com.example.registrosatenciones.db.dao.AtencionEnfermeriaDao;
 import com.example.registrosatenciones.db.dao.AtencionOdontologiaDao;
 import com.example.registrosatenciones.db.dao.DiagnosticoDao;
@@ -17,6 +18,8 @@ import com.example.registrosatenciones.db.dao.TipoPrestacionEnfermeriaDao;
 import com.example.registrosatenciones.db.dao.TipoPrestacionOdontologiaDao;
 import com.example.registrosatenciones.db.entity.DiagnosticoEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
+import com.example.registrosatenciones.db.entity.PrestacionEnfermeriaEntity;
+import com.example.registrosatenciones.db.entity.PrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.relation.AtencionConPrestaciones;
@@ -30,7 +33,9 @@ import com.example.registrosatenciones.util.Conectividad;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -107,19 +112,24 @@ public class FichaPacienteViewModel extends AndroidViewModel {
         return errorOnline;
     }
 
-    public void cargarHistoriaOnline(int serverId) {
+    public void cargarHistoriaOnline(int serverId, long pacienteLocalId) {
         String token = PreferenciasUsuario.getAuthHeader(context);
         ApiClient.getApiAtenciones().obtenerPaciente(token, serverId)
                 .enqueue(new Callback<PacienteDetalleResponse>() {
             @Override public void onResponse(Call<PacienteDetalleResponse> call,
                                              Response<PacienteDetalleResponse> response) {
                 if (response.isSuccessful() && response.body() != null && response.body().getAtenciones() != null) {
-                    List<ItemHistoria> items = new ArrayList<>();
+                    List<ItemHistoria> online = new ArrayList<>();
                     for (AtencionResumenResponse a : response.body().getAtenciones()) {
-                        items.add(new ItemHistoria(a.getTipo(), a.getFecha(), a.getResumen(),
+                        online.add(new ItemHistoria(a.getTipo(), a.getFecha(), a.getResumen(),
                                 a.getPrestaciones(), ItemHistoria.Fuente.ONLINE, a.getId(), 0));
                     }
-                    historiaOnline.setValue(ItemHistoria.ordenarPorFechaDesc(items));
+                    AppExecutors.io().execute(() -> {
+                        List<ItemHistoria> todo = new ArrayList<>(online);
+                        todo.addAll(construirPendientes(pacienteLocalId));
+                        List<ItemHistoria> ordenado = ItemHistoria.ordenarPorFechaDesc(todo);
+                        AppExecutors.ejecutarEnUI(() -> historiaOnline.setValue(ordenado));
+                    });
                 } else {
                     errorOnline.setValue(true);
                 }
@@ -128,5 +138,44 @@ public class FichaPacienteViewModel extends AndroidViewModel {
                 errorOnline.setValue(true);
             }
         });
+    }
+
+    // Atenciones cargadas en este equipo que todavía no sincronizaron: el server no las conoce,
+    // así que se suman al timeline online para que no desaparezcan hasta la próxima sync.
+    private List<ItemHistoria> construirPendientes(long pacienteLocalId) {
+        List<ItemHistoria> items = new ArrayList<>();
+
+        Map<Integer, String> nombresEnf = new HashMap<>();
+        for (TipoPrestacionEnfermeriaEntity t : tipoPrestacionDao.listar()) {
+            nombresEnf.put(t.getId(), t.getNombrePrestacion());
+        }
+        Map<Integer, String> nombresOdo = new HashMap<>();
+        for (TipoPrestacionOdontologiaEntity t : tipoPrestacionOdoDao.listar()) {
+            nombresOdo.put(t.getId(), t.getNombre());
+        }
+
+        for (AtencionConPrestaciones a : atencionDao.pendientesDe(pacienteLocalId, SyncEstado.PENDIENTE)) {
+            List<String> prestaciones = new ArrayList<>();
+            for (PrestacionEnfermeriaEntity p : a.getPrestaciones()) {
+                prestaciones.add(nombresEnf.getOrDefault(p.getTipoPrestacionId(), "Prestación")
+                        + " ×" + p.getCantidad());
+            }
+            String resumen = a.getAtencion().getTipoAtencion() == 2 ? "Internado" : "Ambulatorio";
+            items.add(new ItemHistoria("E", a.getAtencion().getFechaRegistroLocal(), resumen, prestaciones,
+                    ItemHistoria.Fuente.LOCAL, null, a.getAtencion().getLocalId()));
+        }
+
+        for (AtencionOdontologiaConDetalle a : atencionOdoDao.pendientesDe(pacienteLocalId, SyncEstado.PENDIENTE)) {
+            List<String> prestaciones = new ArrayList<>();
+            for (PrestacionOdontologiaEntity p : a.getPrestaciones()) {
+                prestaciones.add(nombresOdo.getOrDefault(p.getTipoPrestacionId(), "Prestación")
+                        + " ×" + p.getCantidad());
+            }
+            String resumen = a.getAtencion().getTipoConsulta() == 1 ? "1ª vez" : "Ulterior";
+            items.add(new ItemHistoria("O", a.getAtencion().getFechaRegistroLocal(), resumen, prestaciones,
+                    ItemHistoria.Fuente.LOCAL, null, a.getAtencion().getLocalId()));
+        }
+
+        return items;
     }
 }

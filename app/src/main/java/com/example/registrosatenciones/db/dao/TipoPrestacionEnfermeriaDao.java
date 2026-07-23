@@ -18,5 +18,8 @@ public interface TipoPrestacionEnfermeriaDao {
     void guardarCatalogo(List<TipoPrestacionEnfermeriaEntity> tipos);
 
     @Query("SELECT * FROM tipos_prestacion_enfermeria ORDER BY grupo, nombrePrestacion")
+    List<TipoPrestacionEnfermeriaEntity> listar();
+
+    @Query("SELECT * FROM tipos_prestacion_enfermeria ORDER BY grupo, nombrePrestacion")
     LiveData<List<TipoPrestacionEnfermeriaEntity>> observarCatalogo();
 }

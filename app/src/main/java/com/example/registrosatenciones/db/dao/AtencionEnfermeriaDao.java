@@ -56,6 +56,12 @@ public interface AtencionEnfermeriaDao {
     @Query("SELECT * FROM prestaciones_enfermeria WHERE atencionLocalId = :atencionLocalId")
     List<PrestacionEnfermeriaEntity> prestacionesDe(long atencionLocalId);
 
+    // Atenciones de este equipo que todavía no subieron, para sumarlas a la historia online.
+    @Transaction
+    @Query("SELECT * FROM atenciones_enfermeria " +
+            "WHERE pacienteLocalId = :pacienteLocalId AND syncState = :estado")
+    List<AtencionConPrestaciones> pendientesDe(long pacienteLocalId, int estado);
+
     @Query("SELECT * FROM atenciones_enfermeria " +
             "WHERE syncState = :estado AND institucionIdCaptura = :institucionId " +
             "ORDER BY fechaRegistroLocal DESC")
