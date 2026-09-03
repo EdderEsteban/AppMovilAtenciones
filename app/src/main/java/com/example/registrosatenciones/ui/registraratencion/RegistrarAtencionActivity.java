@@ -94,6 +94,7 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             viewModel.getAtencionEnEdicion().observe(this, cargada -> {
                 atencionCargada = cargada;
                 intentarPrecargarFormulario();
+                aplicarCantidadesEnEdicion();
             });
             viewModel.cargarParaEditar(atencionLocalId);
         }
@@ -160,6 +161,7 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
 
         catalogoListo = true;
         intentarPrecargarFormulario();
+        aplicarCantidadesEnEdicion();
     }
 
     // Solo dispara cuando las dos fuentes (atención y catálogo) ya llegaron y
@@ -181,8 +183,15 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
         binding.switchEmbarazada.setChecked(a.isEmbarazada());
         binding.switchSinObraSocial.setChecked(a.isSinObraSocial());
         binding.etObservaciones.setText(a.getObservaciones() != null ? a.getObservaciones() : "");
+    }
 
-        for (PrestacionEnfermeriaEntity p : cargada.getPrestaciones()) {
+    // Las cantidades van aparte de la precarga: viven en las vistas que
+    // renderizarPrestaciones destruye y reconstruye en cero cada vez que el
+    // catálogo emite. Por eso se reaplican en cada reconstrucción, y no una
+    // sola vez como los campos de arriba.
+    private void aplicarCantidadesEnEdicion() {
+        if (atencionCargada == null) return;
+        for (PrestacionEnfermeriaEntity p : atencionCargada.getPrestaciones()) {
             TextView tv = cantidadPorTipoId.get(p.getTipoPrestacionId());
             if (tv != null) tv.setText(String.valueOf(p.getCantidad()));
         }
