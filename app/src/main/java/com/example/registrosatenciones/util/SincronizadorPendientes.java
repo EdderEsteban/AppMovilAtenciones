@@ -26,6 +26,7 @@ import com.example.registrosatenciones.response.PacienteResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import retrofit2.Response;
 
@@ -35,12 +36,33 @@ import retrofit2.Response;
 // perdió la institución activa.
 public class SincronizadorPendientes {
 
+    // Guarda de reentrancia: hay tres disparadores (botón manual, cuenta
+    // regresiva de la pantalla de sincronización, barrido al entrar a Inicio) y
+    // AppExecutors.io() es un pool de varios hilos, no serial. Sin esto, dos
+    // corridas en paralelo pueden leer el mismo pendiente antes de que la primera
+    // lo marque SINCRONIZADO y enviarlo dos veces al servidor.
+    private static final AtomicBoolean enCurso = new AtomicBoolean(false);
+
     private SincronizadorPendientes() {}
 
     // Envía todo lo pendiente que ya cumplió la ventana de edición. Corre en el
     // hilo llamador, que debe ser de entrada/salida. Devuelve false si la sesión
     // perdió la institución activa (409): el llamador decide qué hacer con eso.
+    // Si ya hay una corrida en curso, esta se descarta y devuelve true (como si
+    // la sesión fuera válida): no se pierde nada, lo pendiente sigue pendiente y
+    // se envía en el próximo disparo.
     public static boolean ejecutar(Context context) {
+        if (!enCurso.compareAndSet(false, true)) {
+            return true;
+        }
+        try {
+            return ejecutarSinGuarda(context);
+        } finally {
+            enCurso.set(false);
+        }
+    }
+
+    private static boolean ejecutarSinGuarda(Context context) {
         AppDatabase db = AppDatabase.getInstancia(context);
         PacienteDao pacienteDao = db.pacienteDao();
         AtencionEnfermeriaDao atencionDao = db.atencionEnfermeriaDao();

@@ -44,27 +44,58 @@ public class SincronizacionViewModel extends AndroidViewModel {
 
     private final MutableLiveData<Boolean> sincronizando = new MutableLiveData<>(false);
 
+    // Lista ya armada para la pantalla: título, subtítulo y estado (incluido el
+    // texto de la cuenta regresiva) resueltos acá. La Activity solo la observa y
+    // la escribe; ningún cálculo de fecha ni formateo vive del lado de la UI.
+    private final MutableLiveData<List<ItemPendiente>> items = new MutableLiveData<>(new ArrayList<>());
+
     // Cuenta regresiva de la ventana de edición: el Handler late una vez por
     // segundo mientras haya al menos una atención con ventana abierta, y se
     // detiene solo cuando no queda ninguna (arranca de nuevo si aparece otra).
-    private final MutableLiveData<Boolean> tic = new MutableLiveData<>();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable ticker = this::onTic;
     private boolean tickerActivo = false;
 
+    private final LiveData<List<PacienteEntity>> livePacientesPendientes;
+    private final LiveData<List<PacienteEntity>> livePacientesConError;
     private final LiveData<List<AtencionEnfermeriaEntity>> liveAtencionesPendientes;
+    private final LiveData<List<AtencionEnfermeriaEntity>> liveAtencionesConError;
     private final LiveData<List<AtencionOdontologiaEntity>> liveAtencionesOdoPendientes;
+    private final LiveData<List<AtencionOdontologiaEntity>> liveAtencionesOdoConError;
+
+    private List<PacienteEntity> cachePacientesPendientes = new ArrayList<>();
+    private List<PacienteEntity> cachePacientesConError = new ArrayList<>();
     private List<AtencionEnfermeriaEntity> cacheAtencionesPendientes = new ArrayList<>();
+    private List<AtencionEnfermeriaEntity> cacheAtencionesConError = new ArrayList<>();
     private List<AtencionOdontologiaEntity> cacheAtencionesOdoPendientes = new ArrayList<>();
+    private List<AtencionOdontologiaEntity> cacheAtencionesOdoConError = new ArrayList<>();
     private Set<String> ventanasAbiertasPrevias = new HashSet<>();
 
+    private final Observer<List<PacienteEntity>> observerPacientesPendientes = lista -> {
+        cachePacientesPendientes = lista != null ? lista : new ArrayList<>();
+        reconstruirItems();
+    };
+    private final Observer<List<PacienteEntity>> observerPacientesConError = lista -> {
+        cachePacientesConError = lista != null ? lista : new ArrayList<>();
+        reconstruirItems();
+    };
     private final Observer<List<AtencionEnfermeriaEntity>> observerAtenciones = lista -> {
         cacheAtencionesPendientes = lista != null ? lista : new ArrayList<>();
         evaluarTicker();
+        reconstruirItems();
+    };
+    private final Observer<List<AtencionEnfermeriaEntity>> observerAtencionesConError = lista -> {
+        cacheAtencionesConError = lista != null ? lista : new ArrayList<>();
+        reconstruirItems();
     };
     private final Observer<List<AtencionOdontologiaEntity>> observerAtencionesOdo = lista -> {
         cacheAtencionesOdoPendientes = lista != null ? lista : new ArrayList<>();
         evaluarTicker();
+        reconstruirItems();
+    };
+    private final Observer<List<AtencionOdontologiaEntity>> observerAtencionesOdoConError = lista -> {
+        cacheAtencionesOdoConError = lista != null ? lista : new ArrayList<>();
+        reconstruirItems();
     };
 
     public SincronizacionViewModel(@NonNull Application application) {
@@ -75,10 +106,19 @@ public class SincronizacionViewModel extends AndroidViewModel {
         atencionDao = db.atencionEnfermeriaDao();
         atencionOdoDao = db.atencionOdontologiaDao();
 
+        livePacientesPendientes = observarPacientesPendientes();
+        livePacientesConError = observarPacientesConError();
         liveAtencionesPendientes = observarAtencionesPendientes();
+        liveAtencionesConError = observarAtencionesConError();
         liveAtencionesOdoPendientes = observarAtencionesOdoPendientes();
+        liveAtencionesOdoConError = observarAtencionesOdoConError();
+
+        livePacientesPendientes.observeForever(observerPacientesPendientes);
+        livePacientesConError.observeForever(observerPacientesConError);
         liveAtencionesPendientes.observeForever(observerAtenciones);
+        liveAtencionesConError.observeForever(observerAtencionesConError);
         liveAtencionesOdoPendientes.observeForever(observerAtencionesOdo);
+        liveAtencionesOdoConError.observeForever(observerAtencionesOdoConError);
     }
 
     public LiveData<List<PacienteEntity>> observarPacientesPendientes() {
@@ -113,8 +153,42 @@ public class SincronizacionViewModel extends AndroidViewModel {
         return sincronizando;
     }
 
-    public LiveData<Boolean> getTic() {
-        return tic;
+    public LiveData<List<ItemPendiente>> getItems() {
+        return items;
+    }
+
+    // Arma la lista que va a la pantalla: errores primero, después lo pendiente.
+    // Acá vive todo el formateo (incluida la cuenta regresiva); la Activity solo
+    // recibe el resultado y lo escribe.
+    private void reconstruirItems() {
+        List<ItemPendiente> lista = new ArrayList<>();
+
+        for (PacienteEntity p : cachePacientesConError) {
+            lista.add(new ItemPendiente(p.getApellido() + ", " + p.getNombre(), "No se pudo crear — revisá los datos", true));
+        }
+        for (AtencionEnfermeriaEntity a : cacheAtencionesConError) {
+            String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
+            lista.add(new ItemPendiente("Atención · " + tipo, "No se pudo guardar — revisá los datos", true));
+        }
+        for (AtencionOdontologiaEntity a : cacheAtencionesOdoConError) {
+            String tipo = a.getTipoConsulta() == 1 ? "1ª vez" : "Ulterior";
+            lista.add(new ItemPendiente("Atención odont. · " + tipo, "No se pudo guardar — revisá los datos", true));
+        }
+        for (PacienteEntity p : cachePacientesPendientes) {
+            lista.add(new ItemPendiente(p.getApellido() + ", " + p.getNombre(), "Paciente nuevo · se buscará por DNI", false));
+        }
+        for (AtencionEnfermeriaEntity a : cacheAtencionesPendientes) {
+            String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
+            String tiempoRestante = VentanaEdicion.formatearRestante(a.getFechaRegistroLocal());
+            lista.add(new ItemPendiente("Atención · " + tipo, a.getFechaRegistroLocal(), false, tiempoRestante));
+        }
+        for (AtencionOdontologiaEntity a : cacheAtencionesOdoPendientes) {
+            String tipo = a.getTipoConsulta() == 1 ? "1ª vez" : "Ulterior";
+            String tiempoRestante = VentanaEdicion.formatearRestante(a.getFechaRegistroLocal());
+            lista.add(new ItemPendiente("Atención odont. · " + tipo, a.getFechaRegistroLocal(), false, tiempoRestante));
+        }
+
+        items.setValue(lista);
     }
 
     // Arranca el Handler si aparece alguna atención con ventana abierta y todavía
@@ -161,7 +235,7 @@ public class SincronizacionViewModel extends AndroidViewModel {
         }
         ventanasAbiertasPrevias = abiertasAhora;
 
-        tic.setValue(true);
+        reconstruirItems(); // republica la lista para refrescar el texto de la cuenta regresiva
 
         if (algunaVencioEsteTic && Conectividad.hayConexion(context)) {
             sincronizarAhora();
@@ -178,8 +252,12 @@ public class SincronizacionViewModel extends AndroidViewModel {
     protected void onCleared() {
         super.onCleared();
         handler.removeCallbacks(ticker);
+        livePacientesPendientes.removeObserver(observerPacientesPendientes);
+        livePacientesConError.removeObserver(observerPacientesConError);
         liveAtencionesPendientes.removeObserver(observerAtenciones);
+        liveAtencionesConError.removeObserver(observerAtencionesConError);
         liveAtencionesOdoPendientes.removeObserver(observerAtencionesOdo);
+        liveAtencionesOdoConError.removeObserver(observerAtencionesOdoConError);
     }
 
     public void sincronizarAhora() {
