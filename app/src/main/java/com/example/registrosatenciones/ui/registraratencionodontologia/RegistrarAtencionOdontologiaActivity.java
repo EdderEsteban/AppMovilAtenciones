@@ -40,9 +40,6 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
     public static final String EXTRA_PACIENTE_LOCAL_ID = "pacienteLocalId";
     public static final String EXTRA_ATENCION_LOCAL_ID = "atencionLocalId";
 
-    private static final String[] TURNO_LABELS = {"Ventanilla", "Profesional", "Demanda espontánea", "Interdisciplinario"};
-    private static final int[] TURNO_CODIGOS = {1, 2, 3, 4};
-
     private ActivityRegistrarAtencionOdontologiaBinding binding;
     private RegistrarAtencionOdontologiaViewModel viewModel;
     private long pacienteLocalId;
@@ -53,10 +50,15 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
     private Integer diagnosticoSeleccionadoId;
     private List<DiagnosticoEntity> listaDiagnosticos = new ArrayList<>();
 
-    // Última atención a editar recibida por LiveData, para reaplicarla cuando
-    // terminen de llegar el catálogo de prestaciones y la lista de diagnósticos
-    // (otras dos fuentes asíncronas independientes).
-    private AtencionOdontologiaConDetalle atencionPendienteDePrecargar;
+    // La atención a editar, el catálogo de prestaciones y la lista de
+    // diagnósticos llegan por LiveData independientes. Se precarga UNA sola
+    // vez, cuando las tres fuentes están listas: reaplicar la precarga en cada
+    // llegada pisaría sin avisar lo que el usuario ya haya tocado en el
+    // formulario entre medio.
+    private AtencionOdontologiaConDetalle atencionCargada;
+    private boolean catalogoListo;
+    private boolean diagnosticosListos;
+    private boolean formularioPrecargado;
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
 
@@ -89,16 +91,21 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
 
         if (modoEdicion) {
             binding.btnGuardar.setText("Guardar cambios");
-            viewModel.getAtencionEnEdicion().observe(this, this::precargarFormulario);
+            viewModel.getAtencionEnEdicion().observe(this, cargada -> {
+                atencionCargada = cargada;
+                intentarPrecargarFormulario();
+            });
             viewModel.cargarParaEditar(atencionLocalId);
         } else {
             // Arranca la atención nueva con el último odontograma del paciente (no en blanco).
             viewModel.precargarUltimoOdontograma(pacienteLocalId);
         }
 
-        ArrayAdapter<String> turnoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, TURNO_LABELS);
+        ArrayAdapter<String> turnoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1,
+                RegistrarAtencionOdontologiaViewModel.TURNO_LABELS);
         binding.actvTipoTurno.setAdapter(turnoAdapter);
-        binding.actvTipoTurno.setOnItemClickListener((parent, v, position, id) -> turnoSeleccionado = TURNO_CODIGOS[position]);
+        binding.actvTipoTurno.setOnItemClickListener((parent, v, position, id) ->
+                turnoSeleccionado = RegistrarAtencionOdontologiaViewModel.TURNO_CODIGOS[position]);
 
         viewModel.observarPaciente(pacienteLocalId).observe(this, paciente -> {
             if (paciente == null) return;
@@ -130,12 +137,8 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
 
         viewModel.getDiagnosticos().observe(this, lista -> {
             listaDiagnosticos = lista != null ? lista : new ArrayList<>();
-            // La lista de diagnósticos es otra fuente asíncrona independiente: si
-            // la atención a editar ya había llegado, el texto del diagnóstico
-            // pudo haber quedado sin mostrarse porque la lista todavía estaba vacía.
-            if (atencionPendienteDePrecargar != null) {
-                precargarFormulario(atencionPendienteDePrecargar);
-            }
+            diagnosticosListos = true;
+            intentarPrecargarFormulario();
         });
 
         viewModel.getCpo().observe(this, v -> {
@@ -250,18 +253,21 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
             binding.containerPrestaciones.addView(crearFilaPrestacion(tipo));
         }
 
-        // El catálogo y la atención a editar llegan por LiveData independientes.
-        // Si la atención llegó primero, cantidadPorTipoId todavía estaba vacío y
-        // esa precarga no tuvo efecto: se reintenta acá, que es uno de los puntos
-        // donde ya sabemos que esta fuente está disponible.
-        if (atencionPendienteDePrecargar != null) {
-            precargarFormulario(atencionPendienteDePrecargar);
-        }
+        catalogoListo = true;
+        intentarPrecargarFormulario();
+    }
+
+    // Solo dispara cuando las tres fuentes (atención, catálogo y diagnósticos)
+    // ya llegaron y todavía no se aplicó la precarga. Se ejecuta una única vez.
+    private void intentarPrecargarFormulario() {
+        if (formularioPrecargado) return;
+        if (atencionCargada == null || !catalogoListo || !diagnosticosListos) return;
+        precargarFormulario(atencionCargada);
+        formularioPrecargado = true;
     }
 
     private void precargarFormulario(AtencionOdontologiaConDetalle cargada) {
         if (cargada == null) return;
-        atencionPendienteDePrecargar = cargada;
         AtencionOdontologiaEntity a = cargada.getAtencion();
 
         // Tipo de consulta: 1 = primera vez, 2 = ulterior
@@ -269,27 +275,16 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         else binding.btnPrimeraVez.setChecked(true);
 
         // Tipo de turno: además de mostrarlo hay que dejar seteado turnoSeleccionado,
-        // que es lo que se lee al guardar. El texto sale de TURNO_LABELS buscando el
-        // código en TURNO_CODIGOS.
+        // que es lo que se lee al guardar. El texto ya viene resuelto del ViewModel.
         turnoSeleccionado = a.getTipoTurno();
-        for (int i = 0; i < TURNO_CODIGOS.length; i++) {
-            if (TURNO_CODIGOS[i] == a.getTipoTurno()) {
-                binding.actvTipoTurno.setText(TURNO_LABELS[i], false);
-                break;
-            }
-        }
+        String turnoTexto = viewModel.turnoTexto(a.getTipoTurno());
+        if (turnoTexto != null) binding.actvTipoTurno.setText(turnoTexto, false);
 
         // Diagnóstico: igual, hay que setear diagnosticoSeleccionadoId y mostrar su
-        // texto. La lista llega por su propio LiveData, así que puede no estar
-        // todavía; si está vacía, se muestra cuando llegue (ver observer de
-        // getDiagnosticos, que reintenta esta misma precarga).
+        // texto, ya resuelto por el ViewModel contra la lista de diagnósticos.
         diagnosticoSeleccionadoId = a.getDiagnosticoId();
-        for (DiagnosticoEntity d : listaDiagnosticos) {
-            if (d.getId() == a.getDiagnosticoId()) {
-                binding.etDiagnostico.setText(d.getCodigo() + " — " + d.getDescripcion());
-                break;
-            }
-        }
+        String diagnosticoTexto = viewModel.diagnosticoTexto(a.getDiagnosticoId());
+        if (diagnosticoTexto != null) binding.etDiagnostico.setText(diagnosticoTexto);
 
         binding.switchEmbarazada.setChecked(a.isEmbarazada());
         binding.switchSinObraSocial.setChecked(a.isSinObraSocial());

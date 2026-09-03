@@ -35,9 +35,13 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
 
-    // Última atención recibida por LiveData, para reaplicarla si el catálogo
-    // (otra fuente asíncrona) todavía no había terminado de dibujarse.
-    private AtencionConPrestaciones atencionPendienteDePrecargar;
+    // La atención a editar y el catálogo llegan por LiveData independientes.
+    // Se precarga UNA sola vez, cuando ambas fuentes están listas: reaplicar la
+    // precarga en cada llegada pisaría sin avisar lo que el usuario ya haya
+    // tocado en el formulario entre medio.
+    private AtencionConPrestaciones atencionCargada;
+    private boolean catalogoListo;
+    private boolean formularioPrecargado;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +91,10 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
 
         if (modoEdicion) {
             binding.btnGuardar.setText("Guardar cambios");
-            viewModel.getAtencionEnEdicion().observe(this, this::precargarFormulario);
+            viewModel.getAtencionEnEdicion().observe(this, cargada -> {
+                atencionCargada = cargada;
+                intentarPrecargarFormulario();
+            });
             viewModel.cargarParaEditar(atencionLocalId);
         }
 
@@ -151,18 +158,21 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             binding.containerPrestaciones.addView(crearFilaPrestacion(tipo));
         }
 
-        // El catálogo y la atención a editar llegan por LiveData independientes.
-        // Si la atención llegó primero, cantidadPorTipoId todavía estaba vacío y
-        // esa precarga no tuvo efecto: se reintenta acá, que es el único punto
-        // donde ya sabemos que ambas fuentes están disponibles.
-        if (atencionPendienteDePrecargar != null) {
-            precargarFormulario(atencionPendienteDePrecargar);
-        }
+        catalogoListo = true;
+        intentarPrecargarFormulario();
+    }
+
+    // Solo dispara cuando las dos fuentes (atención y catálogo) ya llegaron y
+    // todavía no se aplicó la precarga. Se ejecuta una única vez.
+    private void intentarPrecargarFormulario() {
+        if (formularioPrecargado) return;
+        if (atencionCargada == null || !catalogoListo) return;
+        precargarFormulario(atencionCargada);
+        formularioPrecargado = true;
     }
 
     private void precargarFormulario(AtencionConPrestaciones cargada) {
         if (cargada == null) return;
-        atencionPendienteDePrecargar = cargada;
         AtencionEnfermeriaEntity a = cargada.getAtencion();
 
         if (a.getTipoAtencion() == 2) binding.btnInternado.setChecked(true);

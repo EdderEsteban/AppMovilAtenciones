@@ -38,6 +38,12 @@ import java.util.Locale;
 
 public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
 
+    // Catálogo de turnos: única fuente de verdad para código <-> etiqueta. La
+    // Activity lo usa solo para armar el adapter del dropdown; la resolución
+    // (código -> etiqueta) es responsabilidad de este ViewModel.
+    public static final String[] TURNO_LABELS = {"Ventanilla", "Profesional", "Demanda espontánea", "Interdisciplinario"};
+    public static final int[] TURNO_CODIGOS = {1, 2, 3, 4};
+
     private final Context context;
     private final PacienteDao pacienteDao;
     private final AtencionOdontologiaDao atencionDao;
@@ -96,6 +102,26 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
 
     public LiveData<AtencionOdontologiaConDetalle> getAtencionEnEdicion() {
         return atencionEnEdicion;
+    }
+
+    // Resuelve el código de turno a su etiqueta para mostrar. null si el
+    // código no está en el catálogo (no debería pasar con datos válidos).
+    public String turnoTexto(int tipoTurno) {
+        for (int i = 0; i < TURNO_CODIGOS.length; i++) {
+            if (TURNO_CODIGOS[i] == tipoTurno) return TURNO_LABELS[i];
+        }
+        return null;
+    }
+
+    // Resuelve el id de diagnóstico contra la lista ya cargada y arma el texto
+    // a mostrar. null si la lista todavía no llegó o el id no está en ella.
+    public String diagnosticoTexto(int diagnosticoId) {
+        List<DiagnosticoEntity> lista = diagnosticos.getValue();
+        if (lista == null) return null;
+        for (DiagnosticoEntity d : lista) {
+            if (d.getId() == diagnosticoId) return d.getCodigo() + " — " + d.getDescripcion();
+        }
+        return null;
     }
 
     // Llamado al volver del EditorCuadranteActivity con el odontograma modificado.
