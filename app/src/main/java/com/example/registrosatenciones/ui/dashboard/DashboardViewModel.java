@@ -28,6 +28,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final Context context;
     private final MutableLiveData<DashboardResponse> dashboard = new MutableLiveData<>();
     private final MutableLiveData<Boolean> cargando = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> sinConexion = new MutableLiveData<>(false);
 
     public DashboardViewModel(@NonNull Application application) {
         super(application);
@@ -42,7 +43,22 @@ public class DashboardViewModel extends AndroidViewModel {
         return cargando;
     }
 
+    public LiveData<Boolean> getSinConexion() {
+        return sinConexion;
+    }
+
     public void cargar() {
+        // El resumen se arma entero en el servidor, así que sin conexión no hay
+        // nada que mostrar. Se avisa con un estado explícito en vez de dejar la
+        // pantalla en blanco: la app sí sirve sin señal, y el usuario tiene que
+        // poder darse cuenta de que lo único que falta es este resumen.
+        if (!Conectividad.hayConexion(context)) {
+            cargando.setValue(false);
+            sinConexion.setValue(true);
+            return;
+        }
+
+        sinConexion.setValue(false);
         cargando.setValue(true);
         String token = PreferenciasUsuario.getAuthHeader(context);
 
@@ -56,8 +72,9 @@ public class DashboardViewModel extends AndroidViewModel {
                 cargando.setValue(false);
                 if (response.isSuccessful() && response.body() != null) {
                     dashboard.setValue(response.body());
-                } else if (response.code() == 409) {
-                    Toast.makeText(context, "Tu sesión perdió la institución activa. Volvé a iniciar sesión.", Toast.LENGTH_LONG).show();
+                } else if (response.code() == 409 || response.code() == 401) {
+                    // 409: la sesión perdió la institución. 401: el token venció.
+                    Toast.makeText(context, "Tu sesión ya no es válida. Volvé a iniciar sesión.", Toast.LENGTH_LONG).show();
                     irALogin();
                 } else {
                     Toast.makeText(context, ApiClient.obtenerMensajeError(response), Toast.LENGTH_LONG).show();
@@ -67,7 +84,7 @@ public class DashboardViewModel extends AndroidViewModel {
             @Override
             public void onFailure(@NonNull Call<DashboardResponse> call, @NonNull Throwable t) {
                 cargando.setValue(false);
-                Toast.makeText(context, "Sin conexión — no se pudo cargar el resumen", Toast.LENGTH_SHORT).show();
+                sinConexion.setValue(true);
             }
         });
     }

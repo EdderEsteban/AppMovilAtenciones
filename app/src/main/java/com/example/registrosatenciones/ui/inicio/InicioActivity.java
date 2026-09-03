@@ -48,6 +48,12 @@ public class InicioActivity extends NavegacionInferiorActivity {
         viewModel.getDashboard().observe(this, this::renderizarDashboard);
         viewModel.getCargando().observe(this, cargando ->
                 binding.progressDashboard.setVisibility(cargando ? View.VISIBLE : View.GONE));
+
+        viewModel.getSinConexion().observe(this, sinConexion -> {
+            boolean sin = Boolean.TRUE.equals(sinConexion);
+            binding.tvSinConexionDashboard.setVisibility(sin ? View.VISIBLE : View.GONE);
+            binding.scrollDashboard.setVisibility(sin ? View.GONE : View.VISIBLE);
+        });
         viewModel.cargar();
 
         configurarNavInferior();

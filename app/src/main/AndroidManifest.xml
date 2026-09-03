@@ -15,14 +15,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RegistrosAtenciones">
 
+        <!-- El punto de entrada decide a dónde ir según la sesión guardada, sin
+             tocar la red. Si el launcher fuera LoginActivity, sin señal la app
+             quedaría inaccesible aunque la base local esté completa. -->
         <activity
-            android:name=".ui.login.LoginActivity"
+            android:name=".ui.arranque.ArranqueActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.login.LoginActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ui.inicio.InicioActivity"

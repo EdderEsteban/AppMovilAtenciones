@@ -311,8 +311,11 @@ public class SincronizacionViewModel extends AndroidViewModel {
         });
     }
 
+    // Cubre los dos casos en que no sirve reintentar: la sesión perdió la
+    // institución activa (409) o el token venció (401, dura 12 horas). El mensaje
+    // es común porque para el usuario la acción es la misma: volver a entrar.
     private void irALoginPorConflicto() {
-        Toast.makeText(context, "Tu sesión perdió la institución activa. Volvé a iniciar sesión.", Toast.LENGTH_LONG).show();
+        Toast.makeText(context, "Tu sesión ya no es válida. Volvé a iniciar sesión para sincronizar.", Toast.LENGTH_LONG).show();
         Intent intent = new Intent(context, LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         context.startActivity(intent);

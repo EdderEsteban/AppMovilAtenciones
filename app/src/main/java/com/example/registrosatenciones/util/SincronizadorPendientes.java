@@ -177,7 +177,9 @@ public class SincronizadorPendientes {
                 atencion.setServerId(respuesta.body().getId());
                 atencion.setSyncState(SyncEstado.SINCRONIZADO);
                 atencionDao.actualizar(atencion);
-            } else if (respuesta.code() == 409) {
+            } else if (respuesta.code() == 409 || respuesta.code() == 401) {
+                // 409: la sesion perdio la institucion. 401: el token vencio (dura 12 h).
+                // En los dos casos no tiene sentido seguir intentando: hay que reloguear.
                 return false;
             } else if (respuesta.code() == 400) {
                 marcarError(atencionDao, atencion); // error de negocio — no se resuelve reintentando
@@ -231,7 +233,9 @@ public class SincronizadorPendientes {
                 atencion.setServerId(respuesta.body().getId());
                 atencion.setSyncState(SyncEstado.SINCRONIZADO);
                 atencionOdoDao.actualizar(atencion);
-            } else if (respuesta.code() == 409) {
+            } else if (respuesta.code() == 409 || respuesta.code() == 401) {
+                // 409: la sesion perdio la institucion. 401: el token vencio (dura 12 h).
+                // En los dos casos no tiene sentido seguir intentando: hay que reloguear.
                 return false;
             } else if (respuesta.code() == 400) {
                 marcarError(atencionOdoDao, atencion); // error de negocio — no se resuelve reintentando

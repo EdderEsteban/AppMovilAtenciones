@@ -209,6 +209,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/scrollDashboard" />
 
+    <!-- El resumen se arma en el servidor, así que sin conexión no hay nada que
+         mostrar. Se avisa acá en vez de dejar la pantalla en blanco: el resto de
+         la app sí funciona sin señal. -->
+    <TextView
+        android:id="@+id/tvSinConexionDashboard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center"
+        android:text="Sin conexión: el resumen no está disponible.\n\nPodés seguir registrando atenciones y se van a sincronizar cuando vuelva la señal."
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/scrollDashboard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/scrollDashboard" />
+
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
         android:layout_width="0dp"
