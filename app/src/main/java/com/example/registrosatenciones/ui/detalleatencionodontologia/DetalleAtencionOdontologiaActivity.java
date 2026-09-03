@@ -1,5 +1,6 @@
 package com.example.registrosatenciones.ui.detalleatencionodontologia;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -20,6 +21,7 @@ import com.example.registrosatenciones.ui.odontologia.model.DientesFdi;
 import com.example.registrosatenciones.ui.odontologia.model.OdontogramaItem;
 import com.example.registrosatenciones.ui.odontologia.model.OdontogramaMapper;
 import com.example.registrosatenciones.ui.odontologia.model.OdontogramaModelo;
+import com.example.registrosatenciones.ui.registraratencionodontologia.RegistrarAtencionOdontologiaActivity;
 import com.google.android.material.chip.Chip;
 
 import java.util.ArrayList;
@@ -90,6 +92,17 @@ public class DetalleAtencionOdontologiaActivity extends AppCompatActivity {
             viewModel.observarDetalle(atencionLocalId).observe(this, detalle -> {
                 detalleActual = detalle;
                 renderizarSiListo();
+            });
+
+            viewModel.getPuedeEditar().observe(this, puede ->
+                    binding.btnEditar.setVisibility(Boolean.TRUE.equals(puede) ? View.VISIBLE : View.GONE));
+
+            binding.btnEditar.setOnClickListener(v -> {
+                Intent intent = new Intent(this, RegistrarAtencionOdontologiaActivity.class);
+                intent.putExtra(RegistrarAtencionOdontologiaActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+                intent.putExtra(RegistrarAtencionOdontologiaActivity.EXTRA_ATENCION_LOCAL_ID, atencionLocalId);
+                startActivity(intent);
+                finish();
             });
         }
     }

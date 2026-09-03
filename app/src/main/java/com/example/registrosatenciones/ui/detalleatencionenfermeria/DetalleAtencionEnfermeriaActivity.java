@@ -1,5 +1,6 @@
 package com.example.registrosatenciones.ui.detalleatencionenfermeria;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -13,6 +14,7 @@ import com.example.registrosatenciones.db.entity.TipoPrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.relation.AtencionConPrestaciones;
 import com.example.registrosatenciones.response.AtencionEnfermeriaDetalleResponse;
 import com.example.registrosatenciones.response.PrestacionDetalleResponse;
+import com.example.registrosatenciones.ui.registraratencion.RegistrarAtencionActivity;
 import com.google.android.material.chip.Chip;
 
 import java.util.HashMap;
@@ -68,6 +70,17 @@ public class DetalleAtencionEnfermeriaActivity extends AppCompatActivity {
             viewModel.observarDetalle(atencionLocalId).observe(this, detalle -> {
                 detalleActual = detalle;
                 renderizarSiListo();
+            });
+
+            viewModel.getPuedeEditar().observe(this, puede ->
+                    binding.btnEditar.setVisibility(Boolean.TRUE.equals(puede) ? View.VISIBLE : View.GONE));
+
+            binding.btnEditar.setOnClickListener(v -> {
+                Intent intent = new Intent(this, RegistrarAtencionActivity.class);
+                intent.putExtra(RegistrarAtencionActivity.EXTRA_PACIENTE_LOCAL_ID, pacienteLocalId);
+                intent.putExtra(RegistrarAtencionActivity.EXTRA_ATENCION_LOCAL_ID, atencionLocalId);
+                startActivity(intent);
+                finish();
             });
         }
     }

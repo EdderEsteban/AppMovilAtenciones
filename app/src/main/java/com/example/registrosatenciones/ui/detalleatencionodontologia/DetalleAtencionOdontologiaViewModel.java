@@ -6,13 +6,16 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.example.registrosatenciones.db.AppDatabase;
+import com.example.registrosatenciones.db.SyncEstado;
 import com.example.registrosatenciones.db.dao.AtencionOdontologiaDao;
 import com.example.registrosatenciones.db.dao.DiagnosticoDao;
 import com.example.registrosatenciones.db.dao.PacienteDao;
 import com.example.registrosatenciones.db.dao.TipoPrestacionOdontologiaDao;
+import com.example.registrosatenciones.db.entity.AtencionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.DiagnosticoEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity;
@@ -21,6 +24,7 @@ import com.example.registrosatenciones.request.ApiClient;
 import com.example.registrosatenciones.response.AtencionOdontologiaDetalleResponse;
 import com.example.registrosatenciones.util.AppExecutors;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
+import com.example.registrosatenciones.util.VentanaEdicion;
 
 import java.util.List;
 
@@ -41,6 +45,12 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
     private final MutableLiveData<AtencionOdontologiaDetalleResponse> detalleOnline = new MutableLiveData<>();
     private final MutableLiveData<Boolean> errorOnline = new MutableLiveData<>();
 
+    // Falso hasta que observarDetalle() enganche una atención local. En el modo
+    // online (odontograma traído del servidor) no hay atención local que editar:
+    // no se llama a observarDetalle y puedeEditar queda en falso toda la vida
+    // de la pantalla.
+    private final MediatorLiveData<Boolean> puedeEditar = new MediatorLiveData<>();
+
     public DetalleAtencionOdontologiaViewModel(@NonNull Application application) {
         super(application);
         contexto = application.getApplicationContext();
@@ -58,6 +68,7 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
                 diagnosticos.setValue(dg);
             });
         });
+        puedeEditar.setValue(false);
     }
 
     public LiveData<PacienteEntity> observarPaciente(long pacienteLocalId) {
@@ -65,7 +76,24 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
     }
 
     public LiveData<AtencionOdontologiaConDetalle> observarDetalle(long atencionLocalId) {
-        return atencionDao.observarPorLocalId(atencionLocalId);
+        LiveData<AtencionOdontologiaConDetalle> fuente = atencionDao.observarPorLocalId(atencionLocalId);
+        // La condición es doble: la ventana tiene que estar abierta y la atención
+        // tiene que estar pendiente de sincronizar. Una ya sincronizada no se
+        // edita aunque quedara tiempo, porque el servidor ya la tiene.
+        puedeEditar.addSource(fuente, detalle -> {
+            if (detalle == null || detalle.getAtencion() == null) {
+                puedeEditar.setValue(false);
+                return;
+            }
+            AtencionOdontologiaEntity atencion = detalle.getAtencion();
+            puedeEditar.setValue(atencion.getSyncState() == SyncEstado.PENDIENTE
+                    && VentanaEdicion.estaAbierta(atencion.getFechaRegistroLocal()));
+        });
+        return fuente;
+    }
+
+    public LiveData<Boolean> getPuedeEditar() {
+        return puedeEditar;
     }
 
     public LiveData<List<TipoPrestacionOdontologiaEntity>> getTiposPrestacion() {
