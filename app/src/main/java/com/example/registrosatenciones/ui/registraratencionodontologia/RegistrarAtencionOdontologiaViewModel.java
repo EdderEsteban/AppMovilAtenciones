@@ -22,11 +22,13 @@ import com.example.registrosatenciones.db.entity.OdontogramaEstadoEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.db.entity.PrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity;
+import com.example.registrosatenciones.db.relation.AtencionOdontologiaConDetalle;
 import com.example.registrosatenciones.ui.odontologia.model.OdontogramaItem;
 import com.example.registrosatenciones.ui.odontologia.model.OdontogramaModelo;
 import com.example.registrosatenciones.ui.odontologia.model.ValoracionLocal;
 import com.example.registrosatenciones.util.AppExecutors;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
+import com.example.registrosatenciones.util.VentanaEdicion;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -47,6 +49,7 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> odontogramaActualizado = new MutableLiveData<>();
     private final MutableLiveData<List<DiagnosticoEntity>> diagnosticos = new MutableLiveData<>();
     private final MutableLiveData<Boolean> guardadoExitoso = new MutableLiveData<>();
+    private final MutableLiveData<AtencionOdontologiaConDetalle> atencionEnEdicion = new MutableLiveData<>();
 
     public RegistrarAtencionOdontologiaViewModel(@NonNull Application application) {
         super(application);
@@ -91,6 +94,10 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
         return guardadoExitoso;
     }
 
+    public LiveData<AtencionOdontologiaConDetalle> getAtencionEnEdicion() {
+        return atencionEnEdicion;
+    }
+
     // Llamado al volver del EditorCuadranteActivity con el odontograma modificado.
     public void actualizarCuadrante(List<OdontogramaItem> nuevosEstados) {
         modelo.cargar(nuevosEstados);
@@ -113,6 +120,28 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
                 modelo.cargar(items);
                 cpo.setValue(modelo.calcularCpo());
                 odontogramaActualizado.setValue(true);
+            });
+        });
+    }
+
+    // Carga la atención a editar CON SU PROPIO odontograma. Ojo: no sirve
+    // precargarUltimoOdontograma, que trae el de la última atención del paciente y
+    // puede no ser esta.
+    public void cargarParaEditar(long atencionLocalId) {
+        AppExecutors.io().execute(() -> {
+            AtencionOdontologiaConDetalle cargada = atencionDao.obtenerConDetalle(atencionLocalId);
+            if (cargada == null) return;
+
+            List<OdontogramaItem> items = new ArrayList<>();
+            for (OdontogramaEstadoEntity e : cargada.getEstados()) {
+                items.add(new OdontogramaItem(e.getNumeroDiente(), e.getSuperficie(), e.getEstado()));
+            }
+
+            AppExecutors.ejecutarEnUI(() -> {
+                modelo.cargar(items);
+                cpo.setValue(modelo.calcularCpo());
+                odontogramaActualizado.setValue(true);
+                atencionEnEdicion.setValue(cargada);
             });
         });
     }
@@ -179,6 +208,71 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
 
             AppExecutors.ejecutarEnUI(() -> {
                 Toast.makeText(context, "Atención guardada. Se sincronizará cuando haya conexión.", Toast.LENGTH_LONG).show();
+                guardadoExitoso.setValue(true);
+            });
+        });
+    }
+
+    public void actualizarAtencion(long atencionLocalId, int tipoConsulta, Integer tipoTurno,
+                                   Integer diagnosticoId, boolean embarazada, boolean sinObraSocial,
+                                   String observaciones, List<PrestacionOdontologiaEntity> prestaciones) {
+        if (tipoTurno == null) {
+            Toast.makeText(context, "Seleccioná el tipo de turno", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (diagnosticoId == null) {
+            Toast.makeText(context, "Seleccioná un diagnóstico", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (prestaciones == null || prestaciones.isEmpty()) {
+            Toast.makeText(context, "Elegí al menos una prestación", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ValoracionLocal valoracion = modelo.calcularCpo();
+        List<OdontogramaEstadoEntity> estados = new ArrayList<>();
+        for (OdontogramaItem item : modelo.aplanar()) {
+            OdontogramaEstadoEntity e = new OdontogramaEstadoEntity();
+            e.setNumeroDiente(item.getNumeroDiente());
+            e.setSuperficie(item.getSuperficie());
+            e.setEstado(item.getEstado());
+            estados.add(e);
+        }
+
+        AppExecutors.io().execute(() -> {
+            AtencionOdontologiaConDetalle actual = atencionDao.obtenerConDetalle(atencionLocalId);
+            if (actual == null) return;
+            AtencionOdontologiaEntity atencion = actual.getAtencion();
+
+            // La ventana se vuelve a comprobar acá, contra el dato y no contra la
+            // pantalla: entre que se abrió el formulario y se presionó Guardar
+            // pueden haber pasado los 15 minutos.
+            if (!VentanaEdicion.estaAbierta(atencion.getFechaRegistroLocal())) {
+                AppExecutors.ejecutarEnUI(() -> Toast.makeText(context,
+                        "Pasaron los 15 minutos: la atención ya no se puede editar.",
+                        Toast.LENGTH_LONG).show());
+                return;
+            }
+
+            atencion.setTipoConsulta(tipoConsulta);
+            atencion.setTipoTurno(tipoTurno);
+            atencion.setDiagnosticoId(diagnosticoId);
+            atencion.setEmbarazada(embarazada);
+            atencion.setSinObraSocial(sinObraSocial);
+            atencion.setObservaciones(TextUtils.isEmpty(observaciones) ? null : observaciones.trim());
+            atencion.setCariesPerm(valoracion.cariesPerm);
+            atencion.setPerdidosPerm(valoracion.perdidosPerm);
+            atencion.setObturadosPerm(valoracion.obturadosPerm);
+            atencion.setCariesTemp(valoracion.cariesTemp);
+            atencion.setExtraccionTemp(valoracion.extraccionTemp);
+            atencion.setObturadosTemp(valoracion.obturadosTemp);
+            // fechaRegistroLocal NO se toca: si se actualizara, cada corrección
+            // reabriría la ventana y nunca cerraría.
+
+            atencionDao.actualizarConDetalle(atencion, prestaciones, estados);
+
+            AppExecutors.ejecutarEnUI(() -> {
+                Toast.makeText(context, "Atención actualizada.", Toast.LENGTH_SHORT).show();
                 guardadoExitoso.setValue(true);
             });
         });

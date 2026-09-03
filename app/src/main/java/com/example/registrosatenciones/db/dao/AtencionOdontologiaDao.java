@@ -46,6 +46,37 @@ public interface AtencionOdontologiaDao {
     @Update
     void actualizar(AtencionOdontologiaEntity atencion);
 
+    @Query("DELETE FROM prestaciones_odontologia WHERE atencionLocalId = :atencionLocalId")
+    void borrarPrestacionesDe(long atencionLocalId);
+
+    @Query("DELETE FROM odontograma_estados WHERE atencionLocalId = :atencionLocalId")
+    void borrarEstadosDe(long atencionLocalId);
+
+    // Lectura sincrónica para precargar el formulario de edición.
+    @Transaction
+    @Query("SELECT * FROM atenciones_odontologia WHERE localId = :atencionLocalId")
+    AtencionOdontologiaConDetalle obtenerConDetalle(long atencionLocalId);
+
+    // Reemplaza atención, prestaciones y odontograma en una sola transacción, por
+    // la misma razón que guardarConDetalle: un borrado sin reinserción dejaría la
+    // atención mutilada.
+    @Transaction
+    default void actualizarConDetalle(AtencionOdontologiaEntity atencion,
+                                      List<PrestacionOdontologiaEntity> prestaciones,
+                                      List<OdontogramaEstadoEntity> estados) {
+        actualizar(atencion);
+        borrarPrestacionesDe(atencion.getLocalId());
+        borrarEstadosDe(atencion.getLocalId());
+        for (PrestacionOdontologiaEntity p : prestaciones) {
+            p.setAtencionLocalId(atencion.getLocalId());
+        }
+        for (OdontogramaEstadoEntity e : estados) {
+            e.setAtencionLocalId(atencion.getLocalId());
+        }
+        insertarPrestaciones(prestaciones);
+        insertarEstados(estados);
+    }
+
     // Para el sync (sincrónicas, en background)
     @Query("SELECT * FROM atenciones_odontologia WHERE syncState = :estado")
     List<AtencionOdontologiaEntity> listarPorEstado(int estado);
