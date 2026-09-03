@@ -37,6 +37,27 @@ public interface AtencionEnfermeriaDao {
     @Update
     void actualizar(AtencionEnfermeriaEntity atencion);
 
+    @Query("DELETE FROM prestaciones_enfermeria WHERE atencionLocalId = :atencionLocalId")
+    void borrarPrestacionesDe(long atencionLocalId);
+
+    // Lectura sincrónica para precargar el formulario de edición.
+    @Transaction
+    @Query("SELECT * FROM atenciones_enfermeria WHERE localId = :atencionLocalId")
+    AtencionConPrestaciones obtenerConPrestaciones(long atencionLocalId);
+
+    // Actualiza la atención y reemplaza sus prestaciones en una sola transacción:
+    // si se borran y falla la reinserción, la atención quedaría mutilada.
+    @Transaction
+    default void actualizarConPrestaciones(AtencionEnfermeriaEntity atencion,
+                                           List<PrestacionEnfermeriaEntity> prestaciones) {
+        actualizar(atencion);
+        borrarPrestacionesDe(atencion.getLocalId());
+        for (PrestacionEnfermeriaEntity p : prestaciones) {
+            p.setAtencionLocalId(atencion.getLocalId());
+        }
+        insertarPrestaciones(prestaciones);
+    }
+
     // Timeline de la ficha (offline). Ordena por fecha de captura, más nueva primero.
     @Transaction
     @Query("SELECT * FROM atenciones_enfermeria " +

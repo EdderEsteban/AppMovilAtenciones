@@ -11,8 +11,10 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.databinding.ActivityRegistrarAtencionBinding;
+import com.example.registrosatenciones.db.entity.AtencionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.PrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionEnfermeriaEntity;
+import com.example.registrosatenciones.db.relation.AtencionConPrestaciones;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,13 +24,20 @@ import java.util.Map;
 public class RegistrarAtencionActivity extends AppCompatActivity {
 
     public static final String EXTRA_PACIENTE_LOCAL_ID = "pacienteLocalId";
+    public static final String EXTRA_ATENCION_LOCAL_ID = "atencionLocalId";
 
     private ActivityRegistrarAtencionBinding binding;
     private RegistrarAtencionViewModel viewModel;
     private long pacienteLocalId;
+    private long atencionLocalId = -1;
+    private boolean modoEdicion;
     private boolean pacienteTieneObraSocial;
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
+
+    // Última atención recibida por LiveData, para reaplicarla si el catálogo
+    // (otra fuente asíncrona) todavía no había terminado de dibujarse.
+    private AtencionConPrestaciones atencionPendienteDePrecargar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +46,8 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         pacienteLocalId = getIntent().getLongExtra(EXTRA_PACIENTE_LOCAL_ID, -1);
+        atencionLocalId = getIntent().getLongExtra(EXTRA_ATENCION_LOCAL_ID, -1);
+        modoEdicion = atencionLocalId != -1;
 
         viewModel = new ViewModelProvider(this).get(RegistrarAtencionViewModel.class);
 
@@ -74,6 +85,12 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             if (guardado != null && guardado) finish();
         });
 
+        if (modoEdicion) {
+            binding.btnGuardar.setText("Guardar cambios");
+            viewModel.getAtencionEnEdicion().observe(this, this::precargarFormulario);
+            viewModel.cargarParaEditar(atencionLocalId);
+        }
+
         binding.switchSinObraSocial.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (pacienteTieneObraSocial) return;
             actualizarVisibilidadNuevaObraSocial();
@@ -86,17 +103,25 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             String observaciones = binding.etObservaciones.getText().toString();
             String nuevaObraSocial = binding.etNuevaObraSocial.getText().toString();
 
-            viewModel.guardarAtencion(pacienteLocalId, tipoAtencion, embarazada, sinObraSocial,
-                    observaciones, nuevaObraSocial, obtenerPrestacionesSeleccionadas());
+            if (modoEdicion) {
+                viewModel.actualizarAtencion(atencionLocalId, tipoAtencion, embarazada,
+                        sinObraSocial, observaciones, obtenerPrestacionesSeleccionadas());
+            } else {
+                viewModel.guardarAtencion(pacienteLocalId, tipoAtencion, embarazada, sinObraSocial,
+                        observaciones, nuevaObraSocial, obtenerPrestacionesSeleccionadas());
+            }
         });
 
         binding.btnCancelar.setOnClickListener(v -> confirmarCancelar());
     }
 
     private void confirmarCancelar() {
+        String mensaje = modoEdicion
+                ? "Se van a descartar los cambios que hiciste en esta atención."
+                : "Se va a perder lo que cargaste en esta atención.";
         new AlertDialog.Builder(this)
                 .setTitle("¿Cancelar el registro?")
-                .setMessage("Se va a perder lo que cargaste en esta atención.")
+                .setMessage(mensaje)
                 .setPositiveButton("Sí, cancelar", (dialog, which) -> finish())
                 .setNegativeButton("Seguir cargando", null)
                 .show();
@@ -124,6 +149,32 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
                 binding.containerPrestaciones.addView(crearEncabezadoGrupo(grupoActual));
             }
             binding.containerPrestaciones.addView(crearFilaPrestacion(tipo));
+        }
+
+        // El catálogo y la atención a editar llegan por LiveData independientes.
+        // Si la atención llegó primero, cantidadPorTipoId todavía estaba vacío y
+        // esa precarga no tuvo efecto: se reintenta acá, que es el único punto
+        // donde ya sabemos que ambas fuentes están disponibles.
+        if (atencionPendienteDePrecargar != null) {
+            precargarFormulario(atencionPendienteDePrecargar);
+        }
+    }
+
+    private void precargarFormulario(AtencionConPrestaciones cargada) {
+        if (cargada == null) return;
+        atencionPendienteDePrecargar = cargada;
+        AtencionEnfermeriaEntity a = cargada.getAtencion();
+
+        if (a.getTipoAtencion() == 2) binding.btnInternado.setChecked(true);
+        else binding.btnAmbulatorio.setChecked(true);
+
+        binding.switchEmbarazada.setChecked(a.isEmbarazada());
+        binding.switchSinObraSocial.setChecked(a.isSinObraSocial());
+        binding.etObservaciones.setText(a.getObservaciones() != null ? a.getObservaciones() : "");
+
+        for (PrestacionEnfermeriaEntity p : cargada.getPrestaciones()) {
+            TextView tv = cantidadPorTipoId.get(p.getTipoPrestacionId());
+            if (tv != null) tv.setText(String.valueOf(p.getCantidad()));
         }
     }
 
