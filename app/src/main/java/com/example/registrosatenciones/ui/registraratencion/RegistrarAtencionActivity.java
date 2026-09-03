@@ -198,9 +198,9 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
     private void aplicarCantidadesEnEdicion() {
         AtencionConPrestaciones cargada = viewModel.getAtencionEnEdicion().getValue();
         if (cargada == null) return;
-        for (PrestacionEnfermeriaEntity p : cargada.getPrestaciones()) {
-            TextView tv = cantidadPorTipoId.get(p.getTipoPrestacionId());
-            if (tv != null) tv.setText(String.valueOf(p.getCantidad()));
+        viewModel.sembrarCantidadesSiVacio(cargada.getPrestaciones());
+        for (Map.Entry<Integer, TextView> entry : cantidadPorTipoId.entrySet()) {
+            entry.getValue().setText(String.valueOf(viewModel.getCantidad(entry.getKey())));
         }
     }
 
@@ -223,15 +223,20 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
         View btnMas = fila.findViewById(R.id.btnMas);
 
         tvNombre.setText(tipo.getNombrePrestacion());
-        tvCantidad.setText("0");
+        // El valor sale del ViewModel, que es lo que sobrevive a la rotación.
+        tvCantidad.setText(String.valueOf(viewModel.getCantidad(tipo.getId())));
         cantidadPorTipoId.put(tipo.getId(), tvCantidad);
 
         btnMenos.setOnClickListener(v -> {
             int actual = Integer.parseInt(tvCantidad.getText().toString());
-            if (actual > 0) tvCantidad.setText(String.valueOf(actual - 1));
+            if (actual > 0) {
+                tvCantidad.setText(String.valueOf(actual - 1));
+                viewModel.setCantidad(tipo.getId(), actual - 1);
+            }
         });
         btnMas.setOnClickListener(v -> {
             int actual = Integer.parseInt(tvCantidad.getText().toString());
+            viewModel.setCantidad(tipo.getId(), actual + 1);
             tvCantidad.setText(String.valueOf(actual + 1));
         });
 

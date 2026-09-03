@@ -74,7 +74,17 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        viewModel.reanudarTicker();
         actualizarEstado();
+    }
+
+    // La cuenta regresiva solo tiene sentido con la pantalla a la vista. Si no se
+    // pausa acá, el Handler del ViewModel sigue latiendo con la app en segundo
+    // plano (el botón Home no destruye la Activity, así que onCleared no corre).
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.pausarTicker();
     }
 
     private void actualizarEstado() {

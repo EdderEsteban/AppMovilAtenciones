@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
 public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
 
@@ -55,6 +57,30 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> odontogramaActualizado = new MutableLiveData<>();
     private final MutableLiveData<List<DiagnosticoEntity>> diagnosticos = new MutableLiveData<>();
     private final MutableLiveData<Boolean> guardadoExitoso = new MutableLiveData<>();
+
+    // Las cantidades viven acá y no en la Activity porque los TextView que las
+    // muestran se destruyen y se vuelven a crear en cada rotación. Si el estado
+    // viviera allá, rotar durante una edición devolvería las cantidades al valor
+    // guardado y se perdería lo que el usuario acababa de cambiar.
+    private final Map<Integer, Integer> cantidades = new HashMap<>();
+
+    public int getCantidad(int tipoPrestacionId) {
+        Integer valor = cantidades.get(tipoPrestacionId);
+        return valor != null ? valor : 0;
+    }
+
+    public void setCantidad(int tipoPrestacionId, int cantidad) {
+        cantidades.put(tipoPrestacionId, cantidad);
+    }
+
+    // Siembra las cantidades desde la atención que se está editando, una sola
+    // vez: si el mapa ya tiene algo, es porque el usuario ya estuvo tocando.
+    public void sembrarCantidadesSiVacio(List<PrestacionOdontologiaEntity> prestaciones) {
+        if (!cantidades.isEmpty() || prestaciones == null) return;
+        for (PrestacionOdontologiaEntity p : prestaciones) {
+            cantidades.put(p.getTipoPrestacionId(), p.getCantidad());
+        }
+    }
     private final MutableLiveData<AtencionOdontologiaConDetalle> atencionEnEdicion = new MutableLiveData<>();
 
     // Estado de la precarga en edición y selecciones que se leen al guardar.

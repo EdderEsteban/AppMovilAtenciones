@@ -55,6 +55,7 @@ public class SincronizacionViewModel extends AndroidViewModel {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable ticker = this::onTic;
     private boolean tickerActivo = false;
+    private boolean pausado = false;
 
     private final LiveData<List<PacienteEntity>> livePacientesPendientes;
     private final LiveData<List<PacienteEntity>> livePacientesConError;
@@ -194,10 +195,32 @@ public class SincronizacionViewModel extends AndroidViewModel {
     // Arranca el Handler si aparece alguna atención con ventana abierta y todavía
     // no estaba latiendo. Se llama cada vez que cambia la lista de pendientes.
     private void evaluarTicker() {
+        if (pausado) return;
         if (!tickerActivo && hayVentanaAbierta()) {
             tickerActivo = true;
             handler.postDelayed(ticker, INTERVALO_TIC_MS);
         }
+    }
+
+    // Detiene el latido cuando la pantalla deja de estar visible. Sin esto el
+    // Handler sigue corriendo con la app en segundo plano: gasta batería, puede
+    // disparar una sincronización fuera de vista y, si esa corrida devuelve 409,
+    // intenta abrir el login desde background, cosa que Android 10 en adelante
+    // bloquea sin ningún error visible (el usuario perdería la sesión sin saberlo).
+    public void pausarTicker() {
+        pausado = true;
+        tickerActivo = false;
+        handler.removeCallbacks(ticker);
+    }
+
+    // Al volver a la pantalla se corre un tic inmediato en vez de esperar un
+    // segundo: pone los tiempos al día de una y procesa los vencimientos que
+    // hayan ocurrido mientras la pantalla no estaba a la vista.
+    public void reanudarTicker() {
+        pausado = false;
+        handler.removeCallbacks(ticker);
+        tickerActivo = true;
+        onTic();
     }
 
     private boolean hayVentanaAbierta() {
@@ -214,6 +237,11 @@ public class SincronizacionViewModel extends AndroidViewModel {
     // texto de la cuenta regresiva) y detecta las atenciones que en este tic
     // cruzaron el cero para disparar el envío automático si hay conexión.
     private void onTic() {
+        if (pausado) {
+            tickerActivo = false;
+            return;
+        }
+
         Set<String> abiertasAhora = new HashSet<>();
         for (AtencionEnfermeriaEntity a : cacheAtencionesPendientes) {
             if (VentanaEdicion.estaAbierta(a.getFechaRegistroLocal())) {
