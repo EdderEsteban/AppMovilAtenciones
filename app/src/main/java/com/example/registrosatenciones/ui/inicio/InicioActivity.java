@@ -60,6 +60,7 @@ public class InicioActivity extends NavegacionInferiorActivity {
     protected void onResume() {
         super.onResume();
         viewModel.cargar();
+        viewModel.sincronizarVencidas();
     }
 
     @Override

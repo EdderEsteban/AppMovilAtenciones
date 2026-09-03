@@ -13,8 +13,11 @@ import androidx.lifecycle.MutableLiveData;
 import com.example.registrosatenciones.request.ApiClient;
 import com.example.registrosatenciones.response.DashboardResponse;
 import com.example.registrosatenciones.ui.login.LoginActivity;
+import com.example.registrosatenciones.util.AppExecutors;
 import com.example.registrosatenciones.util.CatalogoSync;
+import com.example.registrosatenciones.util.Conectividad;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
+import com.example.registrosatenciones.util.SincronizadorPendientes;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -67,6 +70,14 @@ public class DashboardViewModel extends AndroidViewModel {
                 Toast.makeText(context, "Sin conexión — no se pudo cargar el resumen", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    // Barre lo que ya cumplió los 15 minutos. Es la garantía de que nada queda
+    // olvidado: la cuenta regresiva de la pantalla de sincronización solo corre
+    // con esa pantalla abierta.
+    public void sincronizarVencidas() {
+        if (!Conectividad.hayConexion(context)) return;
+        AppExecutors.io().execute(() -> SincronizadorPendientes.ejecutar(context));
     }
 
     private void irALogin() {
