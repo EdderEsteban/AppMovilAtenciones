@@ -15,6 +15,7 @@ import com.example.registrosatenciones.db.entity.AtencionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.ui.common.NavegacionInferiorActivity;
 import com.example.registrosatenciones.util.Conectividad;
+import com.example.registrosatenciones.util.VentanaEdicion;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +80,8 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
             binding.btnSincronizar.setText(sincronizando ? "Sincronizando..." : "Sincronizar ahora");
             actualizarEstado();
         });
+
+        viewModel.getTic().observe(this, tic -> actualizarLista());
 
         binding.btnSincronizar.setOnClickListener(v -> viewModel.sincronizarAhora());
 
@@ -146,11 +149,13 @@ public class SincronizacionActivity extends NavegacionInferiorActivity {
         }
         for (AtencionEnfermeriaEntity a : atencionesPendientes) {
             String tipo = a.getTipoAtencion() == 1 ? "Ambulatorio" : "Internado";
-            items.add(new ItemPendiente("Atención · " + tipo, a.getFechaRegistroLocal(), false));
+            String tiempoRestante = VentanaEdicion.formatearRestante(a.getFechaRegistroLocal());
+            items.add(new ItemPendiente("Atención · " + tipo, a.getFechaRegistroLocal(), false, tiempoRestante));
         }
         for (AtencionOdontologiaEntity a : atencionesOdoPendientes) {
             String tipo = a.getTipoConsulta() == 1 ? "1ª vez" : "Ulterior";
-            items.add(new ItemPendiente("Atención odont. · " + tipo, a.getFechaRegistroLocal(), false));
+            String tiempoRestante = VentanaEdicion.formatearRestante(a.getFechaRegistroLocal());
+            items.add(new ItemPendiente("Atención odont. · " + tipo, a.getFechaRegistroLocal(), false, tiempoRestante));
         }
 
         adapter.setItems(items);

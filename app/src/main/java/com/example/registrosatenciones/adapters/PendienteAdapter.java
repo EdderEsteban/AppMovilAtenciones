@@ -42,7 +42,11 @@ public class PendienteAdapter extends RecyclerView.Adapter<PendienteAdapter.Pend
         holder.tvTitulo.setText(item.getTitulo());
         holder.tvSubtitulo.setText(item.getSubtitulo());
 
-        if (item.isEsError()) {
+        if (!item.isEsError() && item.getTiempoRestante() != null) {
+            holder.chipEstado.setText("En edición (" + item.getTiempoRestante() + ")");
+            holder.chipEstado.setBackgroundResource(R.drawable.bg_chip_pending);
+            holder.chipEstado.setTextColor(context.getColor(R.color.color_pending));
+        } else if (item.isEsError()) {
             holder.chipEstado.setText("Error");
             holder.chipEstado.setBackgroundResource(R.drawable.bg_chip_error);
             holder.chipEstado.setTextColor(context.getColor(R.color.color_error));
