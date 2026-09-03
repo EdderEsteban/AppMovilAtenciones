@@ -51,6 +51,14 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
     // de la pantalla.
     private final MediatorLiveData<Boolean> puedeEditar = new MediatorLiveData<>();
 
+    // Fuente actualmente enganchada a puedeEditar. Se necesita para poder
+    // sacarla antes de enganchar una nueva: la Activity no declara
+    // configChanges, así que una rotación la destruye y recrea, y onCreate
+    // vuelve a llamar a observarDetalle() sobre el mismo ViewModel (que
+    // sobrevive). Sin este removeSource cada rotación dejaría colgada una
+    // fuente vieja con su registro en el InvalidationTracker de Room.
+    private LiveData<AtencionOdontologiaConDetalle> fuenteDetalleActual;
+
     public DetalleAtencionOdontologiaViewModel(@NonNull Application application) {
         super(application);
         contexto = application.getApplicationContext();
@@ -77,6 +85,12 @@ public class DetalleAtencionOdontologiaViewModel extends AndroidViewModel {
 
     public LiveData<AtencionOdontologiaConDetalle> observarDetalle(long atencionLocalId) {
         LiveData<AtencionOdontologiaConDetalle> fuente = atencionDao.observarPorLocalId(atencionLocalId);
+
+        if (fuenteDetalleActual != null) {
+            puedeEditar.removeSource(fuenteDetalleActual);
+        }
+        fuenteDetalleActual = fuente;
+
         // La condición es doble: la ventana tiene que estar abierta y la atención
         // tiene que estar pendiente de sincronizar. Una ya sincronizada no se
         // edita aunque quedara tiempo, porque el servidor ya la tiene.
