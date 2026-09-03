@@ -50,6 +50,12 @@ public interface AtencionOdontologiaDao {
     @Query("SELECT * FROM atenciones_odontologia WHERE syncState = :estado")
     List<AtencionOdontologiaEntity> listarPorEstado(int estado);
 
+    // Solo lo que ya cumplió la ventana de edición. La comparación de textos
+    // funciona porque el formato ISO ordena igual que cronológicamente.
+    @Query("SELECT * FROM atenciones_odontologia " +
+           "WHERE syncState = :estado AND fechaRegistroLocal <= :fechaCorte")
+    List<AtencionOdontologiaEntity> listarEnviables(int estado, String fechaCorte);
+
     @Query("SELECT * FROM prestaciones_odontologia WHERE atencionLocalId = :atencionLocalId")
     List<PrestacionOdontologiaEntity> prestacionesDe(long atencionLocalId);
 

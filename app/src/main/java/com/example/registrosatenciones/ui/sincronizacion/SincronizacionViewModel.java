@@ -34,6 +34,7 @@ import com.example.registrosatenciones.ui.login.LoginActivity;
 import com.example.registrosatenciones.util.AppExecutors;
 import com.example.registrosatenciones.util.Conectividad;
 import com.example.registrosatenciones.util.PreferenciasUsuario;
+import com.example.registrosatenciones.util.VentanaEdicion;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -104,6 +105,7 @@ public class SincronizacionViewModel extends AndroidViewModel {
     private void ejecutarSincronizacion() {
         String token = PreferenciasUsuario.getAuthHeader(context);
         int institucionActiva = PreferenciasUsuario.getInstitucionActivaId(context);
+        String fechaCorte = VentanaEdicion.fechaCorte();
 
         List<PacienteEntity> pacientesPendientes = pacienteDao.listarPorEstado(SyncEstado.PENDIENTE);
         for (PacienteEntity paciente : pacientesPendientes) {
@@ -114,7 +116,8 @@ public class SincronizacionViewModel extends AndroidViewModel {
             }
         }
 
-        List<AtencionEnfermeriaEntity> atencionesPendientes = atencionDao.listarPorEstado(SyncEstado.PENDIENTE);
+        List<AtencionEnfermeriaEntity> atencionesPendientes =
+                atencionDao.listarEnviables(SyncEstado.PENDIENTE, fechaCorte);
         for (AtencionEnfermeriaEntity atencion : atencionesPendientes) {
             if (atencion.getInstitucionIdCaptura() != institucionActiva) {
                 continue; // corresponde a otra institución; se sincroniza cuando el usuario vuelva ahí
@@ -126,7 +129,8 @@ public class SincronizacionViewModel extends AndroidViewModel {
             }
         }
 
-        List<AtencionOdontologiaEntity> atencionesOdoPendientes = atencionOdoDao.listarPorEstado(SyncEstado.PENDIENTE);
+        List<AtencionOdontologiaEntity> atencionesOdoPendientes =
+                atencionOdoDao.listarEnviables(SyncEstado.PENDIENTE, fechaCorte);
         for (AtencionOdontologiaEntity atencion : atencionesOdoPendientes) {
             if (atencion.getInstitucionIdCaptura() != institucionActiva) {
                 continue; // corresponde a otra institución; se sincroniza cuando el usuario vuelva ahí
