@@ -70,10 +70,6 @@ public interface AtencionEnfermeriaDao {
     @Query("SELECT * FROM atenciones_enfermeria WHERE localId = :atencionLocalId")
     LiveData<AtencionConPrestaciones> observarPorLocalId(long atencionLocalId);
 
-    // Para el sync (sincrónicas, en background)
-    @Query("SELECT * FROM atenciones_enfermeria WHERE syncState = :estado")
-    List<AtencionEnfermeriaEntity> listarPorEstado(int estado);
-
     // Solo lo que ya cumplió la ventana de edición. La comparación de textos
     // funciona porque el formato ISO ordena igual que cronológicamente.
     @Query("SELECT * FROM atenciones_enfermeria " +

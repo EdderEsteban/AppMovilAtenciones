@@ -46,19 +46,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
     private long atencionLocalId = -1;
     private boolean modoEdicion;
     private boolean pacienteTieneObraSocial;
-    private Integer turnoSeleccionado;
-    private Integer diagnosticoSeleccionadoId;
     private List<DiagnosticoEntity> listaDiagnosticos = new ArrayList<>();
-
-    // La atención a editar, el catálogo de prestaciones y la lista de
-    // diagnósticos llegan por LiveData independientes. Se precarga UNA sola
-    // vez, cuando las tres fuentes están listas: reaplicar la precarga en cada
-    // llegada pisaría sin avisar lo que el usuario ya haya tocado en el
-    // formulario entre medio.
-    private AtencionOdontologiaConDetalle atencionCargada;
-    private boolean catalogoListo;
-    private boolean diagnosticosListos;
-    private boolean formularioPrecargado;
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
 
@@ -91,8 +79,8 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
 
         if (modoEdicion) {
             binding.btnGuardar.setText("Guardar cambios");
+            ocultarBloqueObraSocial();
             viewModel.getAtencionEnEdicion().observe(this, cargada -> {
-                atencionCargada = cargada;
                 intentarPrecargarFormulario();
                 aplicarCantidadesEnEdicion();
             });
@@ -106,7 +94,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
                 RegistrarAtencionOdontologiaViewModel.TURNO_LABELS);
         binding.actvTipoTurno.setAdapter(turnoAdapter);
         binding.actvTipoTurno.setOnItemClickListener((parent, v, position, id) ->
-                turnoSeleccionado = RegistrarAtencionOdontologiaViewModel.TURNO_CODIGOS[position]);
+                viewModel.setTurnoSeleccionado(RegistrarAtencionOdontologiaViewModel.TURNO_CODIGOS[position]));
 
         viewModel.observarPaciente(pacienteLocalId).observe(this, paciente -> {
             if (paciente == null) return;
@@ -118,8 +106,10 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
 
             boolean esVaron = "M".equals(paciente.getSexo());
             binding.rowEmbarazada.setVisibility(esVaron ? View.GONE : View.VISIBLE);
-            binding.divisorEmbarazada.setVisibility(esVaron ? View.GONE : View.VISIBLE);
+            // El divisor separa Embarazada de Sin obra social; en edición ese bloque no está.
+            binding.divisorEmbarazada.setVisibility(esVaron || modoEdicion ? View.GONE : View.VISIBLE);
 
+            if (modoEdicion) return;
             pacienteTieneObraSocial = paciente.getObraSocial() != null && !paciente.getObraSocial().isEmpty();
             if (pacienteTieneObraSocial) {
                 binding.tvObraSocialActual.setText("Obra social: " + paciente.getObraSocial());
@@ -138,7 +128,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
 
         viewModel.getDiagnosticos().observe(this, lista -> {
             listaDiagnosticos = lista != null ? lista : new ArrayList<>();
-            diagnosticosListos = true;
+            viewModel.marcarDiagnosticosListos();
             intentarPrecargarFormulario();
         });
 
@@ -174,16 +164,19 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         binding.btnGuardar.setOnClickListener(v -> {
             int tipoConsulta = binding.btnUlterior.isChecked() ? 2 : 1;
             boolean embarazada = binding.switchEmbarazada.isChecked();
-            boolean sinObraSocial = binding.switchSinObraSocial.isChecked();
-            String nuevaObraSocial = binding.etNuevaObraSocial.getText().toString();
             String observaciones = binding.etObservaciones.getText().toString();
 
             if (modoEdicion) {
-                viewModel.actualizarAtencion(atencionLocalId, tipoConsulta, turnoSeleccionado, diagnosticoSeleccionadoId,
-                        embarazada, sinObraSocial, observaciones, obtenerPrestacionesSeleccionadas());
+                // La obra social no se manda: en edición no se edita.
+                viewModel.actualizarAtencion(atencionLocalId, tipoConsulta, viewModel.getTurnoSeleccionado(),
+                        viewModel.getDiagnosticoSeleccionadoId(), embarazada, observaciones,
+                        obtenerPrestacionesSeleccionadas());
             } else {
-                viewModel.guardarAtencion(pacienteLocalId, tipoConsulta, turnoSeleccionado, diagnosticoSeleccionadoId,
-                        embarazada, sinObraSocial, nuevaObraSocial, observaciones, obtenerPrestacionesSeleccionadas());
+                viewModel.guardarAtencion(pacienteLocalId, tipoConsulta, viewModel.getTurnoSeleccionado(),
+                        viewModel.getDiagnosticoSeleccionadoId(), embarazada,
+                        binding.switchSinObraSocial.isChecked(),
+                        binding.etNuevaObraSocial.getText().toString(), observaciones,
+                        obtenerPrestacionesSeleccionadas());
             }
         });
 
@@ -217,7 +210,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogBinding.getRoot()).create();
 
         DiagnosticoAdapter adapter = new DiagnosticoAdapter(this, diagnostico -> {
-            diagnosticoSeleccionadoId = diagnostico.getId();
+            viewModel.setDiagnosticoSeleccionadoId(diagnostico.getId());
             binding.etDiagnostico.setText(diagnostico.getCodigo() + " — " + diagnostico.getDescripcion());
             dialog.dismiss();
         });
@@ -235,7 +228,17 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    // En edición la obra social no se toca: al guardar el alta ya quedó escrita en
+    // el paciente. Se oculta el bloque entero en vez de dejarlo editable y
+    // descartar en silencio lo que el usuario escriba.
+    private void ocultarBloqueObraSocial() {
+        binding.rowSinObraSocial.setVisibility(View.GONE);
+        binding.tvObraSocialActual.setVisibility(View.GONE);
+        binding.tilNuevaObraSocial.setVisibility(View.GONE);
+    }
+
     private void actualizarVisibilidadNuevaObraSocial() {
+        if (modoEdicion) return;
         boolean sinObraSocial = binding.switchSinObraSocial.isChecked();
         if (sinObraSocial) {
             binding.tilNuevaObraSocial.setVisibility(View.GONE);
@@ -254,18 +257,21 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
             binding.containerPrestaciones.addView(crearFilaPrestacion(tipo));
         }
 
-        catalogoListo = true;
+        viewModel.marcarCatalogoListo();
         intentarPrecargarFormulario();
         aplicarCantidadesEnEdicion();
     }
 
-    // Solo dispara cuando las tres fuentes (atención, catálogo y diagnósticos)
-    // ya llegaron y todavía no se aplicó la precarga. Se ejecuta una única vez.
+    // La atención, el catálogo y los diagnósticos llegan por LiveData
+    // independientes: solo dispara cuando las tres fuentes ya llegaron y todavía
+    // no se precargó, porque reaplicar la precarga pisaría sin avisar lo que el
+    // usuario ya tocó. El estado vive en el ViewModel y no acá, así que una
+    // rotación tampoco la vuelve a aplicar: los campos con id los restaura
+    // Android solo, y el turno y el diagnóstico elegidos los guarda el ViewModel.
     private void intentarPrecargarFormulario() {
-        if (formularioPrecargado) return;
-        if (atencionCargada == null || !catalogoListo || !diagnosticosListos) return;
-        precargarFormulario(atencionCargada);
-        formularioPrecargado = true;
+        if (!viewModel.debePrecargarFormulario()) return;
+        precargarFormulario(viewModel.getAtencionEnEdicion().getValue());
+        viewModel.marcarFormularioPrecargado();
     }
 
     private void precargarFormulario(AtencionOdontologiaConDetalle cargada) {
@@ -276,20 +282,19 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         if (a.getTipoConsulta() == 2) binding.btnUlterior.setChecked(true);
         else binding.btnPrimeraVez.setChecked(true);
 
-        // Tipo de turno: además de mostrarlo hay que dejar seteado turnoSeleccionado,
-        // que es lo que se lee al guardar. El texto ya viene resuelto del ViewModel.
-        turnoSeleccionado = a.getTipoTurno();
+        // Tipo de turno: además de mostrarlo hay que dejar seteado el turno en el
+        // ViewModel, que es lo que se lee al guardar. El texto ya viene resuelto de ahí.
+        viewModel.setTurnoSeleccionado(a.getTipoTurno());
         String turnoTexto = viewModel.turnoTexto(a.getTipoTurno());
         if (turnoTexto != null) binding.actvTipoTurno.setText(turnoTexto, false);
 
-        // Diagnóstico: igual, hay que setear diagnosticoSeleccionadoId y mostrar su
+        // Diagnóstico: igual, hay que dejar seteado el id en el ViewModel y mostrar su
         // texto, ya resuelto por el ViewModel contra la lista de diagnósticos.
-        diagnosticoSeleccionadoId = a.getDiagnosticoId();
+        viewModel.setDiagnosticoSeleccionadoId(a.getDiagnosticoId());
         String diagnosticoTexto = viewModel.diagnosticoTexto(a.getDiagnosticoId());
         if (diagnosticoTexto != null) binding.etDiagnostico.setText(diagnosticoTexto);
 
         binding.switchEmbarazada.setChecked(a.isEmbarazada());
-        binding.switchSinObraSocial.setChecked(a.isSinObraSocial());
         binding.etObservaciones.setText(a.getObservaciones() != null ? a.getObservaciones() : "");
     }
 
@@ -298,8 +303,9 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
     // catálogo emite. Por eso se reaplican en cada reconstrucción, y no una
     // sola vez como los campos de arriba.
     private void aplicarCantidadesEnEdicion() {
-        if (atencionCargada == null) return;
-        for (PrestacionOdontologiaEntity p : atencionCargada.getPrestaciones()) {
+        AtencionOdontologiaConDetalle cargada = viewModel.getAtencionEnEdicion().getValue();
+        if (cargada == null) return;
+        for (PrestacionOdontologiaEntity p : cargada.getPrestaciones()) {
             TextView tv = cantidadPorTipoId.get(p.getTipoPrestacionId());
             if (tv != null) tv.setText(String.valueOf(p.getCantidad()));
         }

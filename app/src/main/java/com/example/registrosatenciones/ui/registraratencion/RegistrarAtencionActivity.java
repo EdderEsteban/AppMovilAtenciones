@@ -35,14 +35,6 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
 
-    // La atención a editar y el catálogo llegan por LiveData independientes.
-    // Se precarga UNA sola vez, cuando ambas fuentes están listas: reaplicar la
-    // precarga en cada llegada pisaría sin avisar lo que el usuario ya haya
-    // tocado en el formulario entre medio.
-    private AtencionConPrestaciones atencionCargada;
-    private boolean catalogoListo;
-    private boolean formularioPrecargado;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,9 +58,11 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             // Embarazada: no aplica a pacientes varones (igual que el panel .NET)
             boolean esVaron = "M".equals(paciente.getSexo());
             binding.rowEmbarazada.setVisibility(esVaron ? View.GONE : View.VISIBLE);
-            binding.divisorEmbarazada.setVisibility(esVaron ? View.GONE : View.VISIBLE);
+            // El divisor separa Embarazada de Sin obra social; en edición ese bloque no está.
+            binding.divisorEmbarazada.setVisibility(esVaron || modoEdicion ? View.GONE : View.VISIBLE);
 
             // Obra social: si ya tiene una cargada, se muestra de solo lectura y no se pide de nuevo
+            if (modoEdicion) return;
             pacienteTieneObraSocial = paciente.getObraSocial() != null && !paciente.getObraSocial().isEmpty();
             if (pacienteTieneObraSocial) {
                 binding.tvObraSocialActual.setText("Obra social: " + paciente.getObraSocial());
@@ -91,8 +85,8 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
 
         if (modoEdicion) {
             binding.btnGuardar.setText("Guardar cambios");
+            ocultarBloqueObraSocial();
             viewModel.getAtencionEnEdicion().observe(this, cargada -> {
-                atencionCargada = cargada;
                 intentarPrecargarFormulario();
                 aplicarCantidadesEnEdicion();
             });
@@ -107,16 +101,17 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
         binding.btnGuardar.setOnClickListener(v -> {
             int tipoAtencion = binding.btnInternado.isChecked() ? 2 : 1;
             boolean embarazada = binding.switchEmbarazada.isChecked();
-            boolean sinObraSocial = binding.switchSinObraSocial.isChecked();
             String observaciones = binding.etObservaciones.getText().toString();
-            String nuevaObraSocial = binding.etNuevaObraSocial.getText().toString();
 
             if (modoEdicion) {
+                // La obra social no se manda: en edición no se edita.
                 viewModel.actualizarAtencion(atencionLocalId, tipoAtencion, embarazada,
-                        sinObraSocial, observaciones, obtenerPrestacionesSeleccionadas());
+                        observaciones, obtenerPrestacionesSeleccionadas());
             } else {
-                viewModel.guardarAtencion(pacienteLocalId, tipoAtencion, embarazada, sinObraSocial,
-                        observaciones, nuevaObraSocial, obtenerPrestacionesSeleccionadas());
+                viewModel.guardarAtencion(pacienteLocalId, tipoAtencion, embarazada,
+                        binding.switchSinObraSocial.isChecked(),
+                        observaciones, binding.etNuevaObraSocial.getText().toString(),
+                        obtenerPrestacionesSeleccionadas());
             }
         });
 
@@ -135,7 +130,17 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
                 .show();
     }
 
+    // En edición la obra social no se toca: al guardar el alta ya quedó escrita en
+    // el paciente. Se oculta el bloque entero en vez de dejarlo editable y
+    // descartar en silencio lo que el usuario escriba.
+    private void ocultarBloqueObraSocial() {
+        binding.rowSinObraSocial.setVisibility(View.GONE);
+        binding.tvObraSocialActual.setVisibility(View.GONE);
+        binding.tilNuevaObraSocial.setVisibility(View.GONE);
+    }
+
     private void actualizarVisibilidadNuevaObraSocial() {
+        if (modoEdicion) return;
         boolean sinObraSocial = binding.switchSinObraSocial.isChecked();
         if (sinObraSocial) {
             binding.tilNuevaObraSocial.setVisibility(View.GONE);
@@ -159,18 +164,20 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
             binding.containerPrestaciones.addView(crearFilaPrestacion(tipo));
         }
 
-        catalogoListo = true;
+        viewModel.marcarCatalogoListo();
         intentarPrecargarFormulario();
         aplicarCantidadesEnEdicion();
     }
 
-    // Solo dispara cuando las dos fuentes (atención y catálogo) ya llegaron y
-    // todavía no se aplicó la precarga. Se ejecuta una única vez.
+    // La atención a editar y el catálogo llegan por LiveData independientes: solo
+    // dispara cuando las dos fuentes ya llegaron y todavía no se precargó,
+    // porque reaplicar la precarga pisaría sin avisar lo que el usuario ya tocó.
+    // El estado vive en el ViewModel y no acá, así que una rotación tampoco la
+    // vuelve a aplicar: los campos con id los restaura Android solo.
     private void intentarPrecargarFormulario() {
-        if (formularioPrecargado) return;
-        if (atencionCargada == null || !catalogoListo) return;
-        precargarFormulario(atencionCargada);
-        formularioPrecargado = true;
+        if (!viewModel.debePrecargarFormulario()) return;
+        precargarFormulario(viewModel.getAtencionEnEdicion().getValue());
+        viewModel.marcarFormularioPrecargado();
     }
 
     private void precargarFormulario(AtencionConPrestaciones cargada) {
@@ -181,7 +188,6 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
         else binding.btnAmbulatorio.setChecked(true);
 
         binding.switchEmbarazada.setChecked(a.isEmbarazada());
-        binding.switchSinObraSocial.setChecked(a.isSinObraSocial());
         binding.etObservaciones.setText(a.getObservaciones() != null ? a.getObservaciones() : "");
     }
 
@@ -190,8 +196,9 @@ public class RegistrarAtencionActivity extends AppCompatActivity {
     // catálogo emite. Por eso se reaplican en cada reconstrucción, y no una
     // sola vez como los campos de arriba.
     private void aplicarCantidadesEnEdicion() {
-        if (atencionCargada == null) return;
-        for (PrestacionEnfermeriaEntity p : atencionCargada.getPrestaciones()) {
+        AtencionConPrestaciones cargada = viewModel.getAtencionEnEdicion().getValue();
+        if (cargada == null) return;
+        for (PrestacionEnfermeriaEntity p : cargada.getPrestaciones()) {
             TextView tv = cantidadPorTipoId.get(p.getTipoPrestacionId());
             if (tv != null) tv.setText(String.valueOf(p.getCantidad()));
         }

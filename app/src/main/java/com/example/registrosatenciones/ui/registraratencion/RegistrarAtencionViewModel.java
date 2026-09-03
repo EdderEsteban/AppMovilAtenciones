@@ -39,6 +39,12 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> guardadoExitoso = new MutableLiveData<>();
     private final MutableLiveData<AtencionConPrestaciones> atencionEnEdicion = new MutableLiveData<>();
 
+    // Estado de la precarga en edición. Vive acá y no en la Activity porque la
+    // Activity se recrea al rotar: si estas banderas volvieran a cero, la
+    // precarga se aplicaría de nuevo encima de lo que el usuario ya cambió.
+    private boolean catalogoListo;
+    private boolean formularioPrecargado;
+
     public RegistrarAtencionViewModel(@NonNull Application application) {
         super(application);
         context = application.getApplicationContext();
@@ -64,8 +70,24 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
         return atencionEnEdicion;
     }
 
-    // Carga la atención a editar. Si la ventana ya venció, no la publica: la
-    // pantalla queda como un alta normal y el llamador ya avisó al usuario.
+    public void marcarCatalogoListo() {
+        catalogoListo = true;
+    }
+
+    // true solo cuando las dos fuentes (atención y catálogo) ya llegaron y la
+    // precarga todavía no se aplicó en toda la vida del ViewModel.
+    public boolean debePrecargarFormulario() {
+        return !formularioPrecargado && catalogoListo && atencionEnEdicion.getValue() != null;
+    }
+
+    public void marcarFormularioPrecargado() {
+        formularioPrecargado = true;
+    }
+
+    // Carga la atención a editar y la publica siempre: acá no se mira la ventana.
+    // El botón Editar del detalle solo aparece mientras está abierta, y la
+    // revalidación que decide de verdad corre al guardar (actualizarAtencion),
+    // contra el dato y no contra la pantalla.
     public void cargarParaEditar(long atencionLocalId) {
         AppExecutors.io().execute(() -> {
             AtencionConPrestaciones cargada = atencionDao.obtenerConPrestaciones(atencionLocalId);
@@ -114,8 +136,12 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
         });
     }
 
+    // La obra social no entra: al guardar el alta quedó escrita en el paciente y
+    // el par (sinObraSocial, nuevaObraSocial) ya se armó ahí con su invariante.
+    // Tocar solo una de las dos mitades acá fabricaría pares inconsistentes que
+    // el sincronizador mandaría tal cual al servidor.
     public void actualizarAtencion(long atencionLocalId, int tipoAtencion, boolean embarazada,
-                                   boolean sinObraSocial, String observaciones,
+                                   String observaciones,
                                    List<PrestacionEnfermeriaEntity> prestaciones) {
         if (prestaciones == null || prestaciones.isEmpty()) {
             Toast.makeText(context, "Elegí al menos una prestación", Toast.LENGTH_SHORT).show();
@@ -139,7 +165,6 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
 
             atencion.setTipoAtencion(tipoAtencion);
             atencion.setEmbarazada(embarazada);
-            atencion.setSinObraSocial(sinObraSocial);
             atencion.setObservaciones(TextUtils.isEmpty(observaciones) ? null : observaciones.trim());
             // fechaRegistroLocal NO se toca: si se actualizara, cada corrección
             // reabriría la ventana y nunca cerraría.

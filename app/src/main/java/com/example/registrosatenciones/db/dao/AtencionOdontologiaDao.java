@@ -77,10 +77,6 @@ public interface AtencionOdontologiaDao {
         insertarEstados(estados);
     }
 
-    // Para el sync (sincrónicas, en background)
-    @Query("SELECT * FROM atenciones_odontologia WHERE syncState = :estado")
-    List<AtencionOdontologiaEntity> listarPorEstado(int estado);
-
     // Solo lo que ya cumplió la ventana de edición. La comparación de textos
     // funciona porque el formato ISO ordena igual que cronológicamente.
     @Query("SELECT * FROM atenciones_odontologia " +

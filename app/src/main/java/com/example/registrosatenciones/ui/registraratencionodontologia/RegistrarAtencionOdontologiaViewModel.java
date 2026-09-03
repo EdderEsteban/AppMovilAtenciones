@@ -57,6 +57,17 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> guardadoExitoso = new MutableLiveData<>();
     private final MutableLiveData<AtencionOdontologiaConDetalle> atencionEnEdicion = new MutableLiveData<>();
 
+    // Estado de la precarga en edición y selecciones que se leen al guardar.
+    // Viven acá y no en la Activity porque la Activity se recrea al rotar: si
+    // estas banderas volvieran a cero, la precarga se aplicaría de nuevo encima
+    // de lo que el usuario ya cambió, y turno/diagnóstico quedarían en null con
+    // su texto todavía en pantalla.
+    private boolean catalogoListo;
+    private boolean diagnosticosListos;
+    private boolean formularioPrecargado;
+    private Integer turnoSeleccionado;
+    private Integer diagnosticoSeleccionadoId;
+
     public RegistrarAtencionOdontologiaViewModel(@NonNull Application application) {
         super(application);
         context = application.getApplicationContext();
@@ -102,6 +113,41 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
 
     public LiveData<AtencionOdontologiaConDetalle> getAtencionEnEdicion() {
         return atencionEnEdicion;
+    }
+
+    public void marcarCatalogoListo() {
+        catalogoListo = true;
+    }
+
+    public void marcarDiagnosticosListos() {
+        diagnosticosListos = true;
+    }
+
+    // true solo cuando las tres fuentes (atención, catálogo y diagnósticos) ya
+    // llegaron y la precarga todavía no se aplicó en toda la vida del ViewModel.
+    public boolean debePrecargarFormulario() {
+        return !formularioPrecargado && catalogoListo && diagnosticosListos
+                && atencionEnEdicion.getValue() != null;
+    }
+
+    public void marcarFormularioPrecargado() {
+        formularioPrecargado = true;
+    }
+
+    public Integer getTurnoSeleccionado() {
+        return turnoSeleccionado;
+    }
+
+    public void setTurnoSeleccionado(Integer turnoSeleccionado) {
+        this.turnoSeleccionado = turnoSeleccionado;
+    }
+
+    public Integer getDiagnosticoSeleccionadoId() {
+        return diagnosticoSeleccionadoId;
+    }
+
+    public void setDiagnosticoSeleccionadoId(Integer diagnosticoSeleccionadoId) {
+        this.diagnosticoSeleccionadoId = diagnosticoSeleccionadoId;
     }
 
     // Resuelve el código de turno a su etiqueta para mostrar. null si el
@@ -164,9 +210,20 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
             }
 
             AppExecutors.ejecutarEnUI(() -> {
-                modelo.cargar(items);
-                cpo.setValue(modelo.calcularCpo());
-                odontogramaActualizado.setValue(true);
+                // Al rotar, onCreate vuelve a llamar acá y el ViewModel sobrevive con el
+                // odontograma que el odontólogo venía marcando. Por eso solo se carga
+                // desde la base cuando el modelo en memoria está vacío: si ya tiene
+                // marcas son las del usuario y modelo.cargar() las borraría sin aviso.
+                // A diferencia de precargarUltimoOdontograma, acá no se mira si los
+                // items están vacíos: una atención puede tener el odontograma en blanco
+                // y esa carga (que no cambia nada) es válida.
+                if (modelo.aplanar().isEmpty()) {
+                    modelo.cargar(items);
+                    cpo.setValue(modelo.calcularCpo());
+                    odontogramaActualizado.setValue(true);
+                }
+                // La atención sí se vuelve a publicar: es el mismo dato de la base y la
+                // pantalla recién creada lo necesita para precargarse.
                 atencionEnEdicion.setValue(cargada);
             });
         });
@@ -239,8 +296,12 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
         });
     }
 
+    // La obra social no entra: al guardar el alta quedó escrita en el paciente y
+    // el par (sinObraSocial, nuevaObraSocial) ya se armó ahí con su invariante.
+    // Tocar solo una de las dos mitades acá fabricaría pares inconsistentes que
+    // el sincronizador mandaría tal cual al servidor.
     public void actualizarAtencion(long atencionLocalId, int tipoConsulta, Integer tipoTurno,
-                                   Integer diagnosticoId, boolean embarazada, boolean sinObraSocial,
+                                   Integer diagnosticoId, boolean embarazada,
                                    String observaciones, List<PrestacionOdontologiaEntity> prestaciones) {
         if (tipoTurno == null) {
             Toast.makeText(context, "Seleccioná el tipo de turno", Toast.LENGTH_SHORT).show();
@@ -284,7 +345,6 @@ public class RegistrarAtencionOdontologiaViewModel extends AndroidViewModel {
             atencion.setTipoTurno(tipoTurno);
             atencion.setDiagnosticoId(diagnosticoId);
             atencion.setEmbarazada(embarazada);
-            atencion.setSinObraSocial(sinObraSocial);
             atencion.setObservaciones(TextUtils.isEmpty(observaciones) ? null : observaciones.trim());
             atencion.setCariesPerm(valoracion.cariesPerm);
             atencion.setPerdidosPerm(valoracion.perdidosPerm);
