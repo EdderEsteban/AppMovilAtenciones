@@ -31,8 +31,8 @@ import retrofit2.http.Query;
 
 public class ApiClient {
 
-
-    public static final String URLBASE = "https://cnvgwf2q-5237.brs.devtunnels.ms/api/";
+// revisar la url del puerto compartido y NO OLVIDAR EL: "/api/"
+    public static final String URLBASE = "https://49jzp3k9-5237.brs.devtunnels.ms/api/";
 
     public static AtencionesService getApiAtenciones() {
         Gson gson = new GsonBuilder()

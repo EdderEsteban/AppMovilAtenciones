@@ -36,7 +36,7 @@ import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity
         },
         version = 2,
         exportSchema = false)
-public abstract class AppDatabase extends RoomDatabase {
+public abstract class AppDatabase extends RoomDatabase {    
 
     public abstract PacienteDao pacienteDao();
     public abstract AtencionEnfermeriaDao atencionEnfermeriaDao();
@@ -55,7 +55,6 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "atenciones.db")
-                            // TODO: reemplazar por Migration reales antes de un release con datos que importe conservar.
                             .fallbackToDestructiveMigration()
                             .build();
                 }
