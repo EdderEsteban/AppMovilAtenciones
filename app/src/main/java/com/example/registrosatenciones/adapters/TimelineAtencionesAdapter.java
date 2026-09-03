@@ -14,6 +14,7 @@ import com.example.registrosatenciones.db.SyncEstado;
 import com.example.registrosatenciones.db.entity.PrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.relation.AtencionConPrestaciones;
+import com.example.registrosatenciones.util.VentanaEdicion;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -71,6 +72,8 @@ public class TimelineAtencionesAdapter extends RecyclerView.Adapter<TimelineAten
 
         boolean pendiente = item.getAtencion().getSyncState() == SyncEstado.PENDIENTE;
         holder.chipPendiente.setVisibility(pendiente ? View.VISIBLE : View.GONE);
+        String restante = VentanaEdicion.formatearRestante(item.getAtencion().getFechaRegistroLocal());
+        holder.chipPendiente.setText(restante != null ? "Editable — " + restante : "Pendiente");
 
         holder.chipGroupPrestaciones.removeAllViews();
         for (PrestacionEnfermeriaEntity p : item.getPrestaciones()) {

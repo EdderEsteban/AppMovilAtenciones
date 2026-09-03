@@ -15,6 +15,7 @@ import com.example.registrosatenciones.db.entity.DiagnosticoEntity;
 import com.example.registrosatenciones.db.entity.PrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.relation.AtencionOdontologiaConDetalle;
+import com.example.registrosatenciones.util.VentanaEdicion;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -87,6 +88,8 @@ public class TimelineOdontologiaAdapter extends RecyclerView.Adapter<TimelineOdo
 
         boolean pendiente = item.getAtencion().getSyncState() == SyncEstado.PENDIENTE;
         holder.chipPendiente.setVisibility(pendiente ? View.VISIBLE : View.GONE);
+        String restante = VentanaEdicion.formatearRestante(item.getAtencion().getFechaRegistroLocal());
+        holder.chipPendiente.setText(restante != null ? "Editable — " + restante : "Pendiente");
 
         holder.chipGroupPrestaciones.removeAllViews();
         for (PrestacionOdontologiaEntity p : item.getPrestaciones()) {

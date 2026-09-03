@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.ui.historiaclinica.ItemHistoria;
+import com.example.registrosatenciones.util.VentanaEdicion;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -52,7 +53,12 @@ public class TimelineHistoriaAdapter extends RecyclerView.Adapter<TimelineHistor
         h.tvRama.setText(item.esOdontologia() ? "Odontología" : "Enfermería");
         h.tvFecha.setText(item.getFecha());
         h.tvResumen.setText(item.getResumen());
-        h.chipPendiente.setVisibility(item.getFuente() == ItemHistoria.Fuente.LOCAL ? View.VISIBLE : View.GONE);
+        boolean pendiente = item.getFuente() == ItemHistoria.Fuente.LOCAL;
+        h.chipPendiente.setVisibility(pendiente ? View.VISIBLE : View.GONE);
+        if (pendiente) {
+            String restante = VentanaEdicion.formatearRestante(item.getFecha());
+            h.chipPendiente.setText(restante != null ? "Editable — " + restante : "Pendiente");
+        }
 
         h.chipGroupPrestaciones.removeAllViews();
         for (String p : item.getPrestaciones()) {
