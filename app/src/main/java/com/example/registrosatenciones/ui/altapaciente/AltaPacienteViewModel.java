@@ -8,27 +8,48 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.example.registrosatenciones.db.AppDatabase;
 import com.example.registrosatenciones.db.SyncEstado;
+import com.example.registrosatenciones.db.dao.ObraSocialDao;
 import com.example.registrosatenciones.db.dao.PacienteDao;
+import com.example.registrosatenciones.db.entity.ObraSocialEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.ui.pacientes.PacientesActivity;
 import com.example.registrosatenciones.util.AppExecutors;
+
+import java.util.List;
 
 public class AltaPacienteViewModel extends AndroidViewModel {
 
     private final Context context;
     private final PacienteDao pacienteDao;
+    private final ObraSocialDao obraSocialDao;
+
+    private final MutableLiveData<List<ObraSocialEntity>> obrasSociales = new MutableLiveData<>();
 
     public AltaPacienteViewModel(@NonNull Application application) {
         super(application);
         context = application.getApplicationContext();
-        pacienteDao = AppDatabase.getInstancia(context).pacienteDao();
+        AppDatabase db = AppDatabase.getInstancia(context);
+        pacienteDao = db.pacienteDao();
+        obraSocialDao = db.obraSocialDao();
+
+        AppExecutors.io().execute(() -> {
+            List<ObraSocialEntity> lista = obraSocialDao.listar();
+            AppExecutors.ejecutarEnUI(() -> obrasSociales.setValue(lista));
+        });
+    }
+
+    public LiveData<List<ObraSocialEntity>> getObrasSociales() {
+        return obrasSociales;
     }
 
     public void guardarPaciente(String dni, String apellido, String nombre, String fechaNacimiento,
-                                String sexo, String domicilio, String telefono, String obraSocial) {
+                                String sexo, String domicilio, String telefono,
+                                Integer obraSocialId, String obraSocialNombre) {
         if (TextUtils.isEmpty(dni) || TextUtils.isEmpty(apellido) || TextUtils.isEmpty(nombre)
                 || TextUtils.isEmpty(fechaNacimiento) || TextUtils.isEmpty(sexo)) {
             Toast.makeText(context, "Completá DNI, apellido, nombre, fecha de nacimiento y sexo", Toast.LENGTH_SHORT).show();
@@ -53,7 +74,8 @@ public class AltaPacienteViewModel extends AndroidViewModel {
             nuevo.setSexo(sexo);
             nuevo.setDomicilio(TextUtils.isEmpty(domicilio) ? null : domicilio.trim());
             nuevo.setTelefono(TextUtils.isEmpty(telefono) ? null : telefono.trim());
-            nuevo.setObraSocial(TextUtils.isEmpty(obraSocial) ? null : obraSocial.trim());
+            nuevo.setObraSocialId(obraSocialId);
+            nuevo.setObraSocialNombre(TextUtils.isEmpty(obraSocialNombre) ? null : obraSocialNombre.trim());
             nuevo.setSyncState(SyncEstado.PENDIENTE);
             pacienteDao.insertar(nuevo);
 

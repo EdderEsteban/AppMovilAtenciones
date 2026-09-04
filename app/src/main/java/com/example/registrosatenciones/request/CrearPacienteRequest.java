@@ -8,10 +8,10 @@ public class CrearPacienteRequest {
     private String sexo;
     private String domicilio;
     private String telefono;
-    private String obraSocial;
+    private Integer obraSocialId;
 
     public CrearPacienteRequest(String dni, String apellido, String nombre, String fechaNacimiento,
-                                 String sexo, String domicilio, String telefono, String obraSocial) {
+                                 String sexo, String domicilio, String telefono, Integer obraSocialId) {
         this.dni = dni;
         this.apellido = apellido;
         this.nombre = nombre;
@@ -19,7 +19,7 @@ public class CrearPacienteRequest {
         this.sexo = sexo;
         this.domicilio = domicilio;
         this.telefono = telefono;
-        this.obraSocial = obraSocial;
+        this.obraSocialId = obraSocialId;
     }
 
     public String getDni() { return dni; }
@@ -43,6 +43,6 @@ public class CrearPacienteRequest {
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
 
-    public String getObraSocial() { return obraSocial; }
-    public void setObraSocial(String obraSocial) { this.obraSocial = obraSocial; }
+    public Integer getObraSocialId() { return obraSocialId; }
+    public void setObraSocialId(Integer obraSocialId) { this.obraSocialId = obraSocialId; }
 }
