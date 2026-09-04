@@ -104,7 +104,8 @@ public class PacientesViewModel extends AndroidViewModel {
             entity.setNombre(r.getNombre());
             entity.setSexo(r.getSexo());
             entity.setEdad(r.getEdad());
-            entity.setObraSocial(r.getObraSocial());
+            entity.setObraSocialId(r.getObraSocialId());
+            entity.setObraSocialNombre(r.getObraSocial());
             entity.setTelefono(r.getTelefono());
             entity.setSyncState(SyncEstado.SINCRONIZADO);
 

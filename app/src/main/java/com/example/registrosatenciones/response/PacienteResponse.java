@@ -7,7 +7,8 @@ public class PacienteResponse {
     private String dni;
     private int edad;
     private String sexo;
-    private String obraSocial;   // nullable
+    private Integer obraSocialId; // nullable
+    private String obraSocial;   // nullable, nombre
     private String telefono;    // nullable
 
     public int getId() { return id; }
@@ -27,6 +28,9 @@ public class PacienteResponse {
 
     public String getSexo() { return sexo; }
     public void setSexo(String sexo) { this.sexo = sexo; }
+
+    public Integer getObraSocialId() { return obraSocialId; }
+    public void setObraSocialId(Integer obraSocialId) { this.obraSocialId = obraSocialId; }
 
     public String getObraSocial() { return obraSocial; }
     public void setObraSocial(String obraSocial) { this.obraSocial = obraSocial; }

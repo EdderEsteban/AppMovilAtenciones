@@ -121,7 +121,7 @@ public class SincronizadorPendientes {
                 CrearPacienteRequest request = new CrearPacienteRequest(
                         paciente.getDni(), paciente.getApellido(), paciente.getNombre(),
                         paciente.getFechaNacimiento(), paciente.getSexo(),
-                        paciente.getDomicilio(), paciente.getTelefono(), paciente.getObraSocial());
+                        paciente.getDomicilio(), paciente.getTelefono(), paciente.getObraSocialId());
 
                 Response<CrearPacienteResponse> creacion =
                         ApiClient.getApiAtenciones().crearPaciente(token, request).execute();
@@ -165,7 +165,7 @@ public class SincronizadorPendientes {
         request.setTipoAtencion(atencion.getTipoAtencion());
         request.setEmbarazada(atencion.isEmbarazada());
         request.setSinObraSocial(atencion.isSinObraSocial());
-        request.setNuevaObraSocial(atencion.getNuevaObraSocial());
+        request.setNuevaObraSocialId(atencion.getNuevaObraSocialId());
         request.setObservaciones(atencion.getObservaciones());
         request.setPrestaciones(prestaciones);
 
@@ -220,7 +220,7 @@ public class SincronizadorPendientes {
         request.setDiagnosticoId(atencion.getDiagnosticoId());
         request.setEmbarazada(atencion.isEmbarazada());
         request.setSinObraSocial(atencion.isSinObraSocial());
-        request.setNuevaObraSocial(atencion.getNuevaObraSocial());
+        request.setNuevaObraSocialId(atencion.getNuevaObraSocialId());
         request.setObservaciones(atencion.getObservaciones());
         request.setPrestaciones(prestaciones);
         request.setOdontograma(odontograma);
