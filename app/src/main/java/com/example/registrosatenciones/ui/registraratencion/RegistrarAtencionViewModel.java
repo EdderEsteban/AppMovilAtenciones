@@ -13,9 +13,11 @@ import androidx.lifecycle.MutableLiveData;
 import com.example.registrosatenciones.db.AppDatabase;
 import com.example.registrosatenciones.db.SyncEstado;
 import com.example.registrosatenciones.db.dao.AtencionEnfermeriaDao;
+import com.example.registrosatenciones.db.dao.ObraSocialDao;
 import com.example.registrosatenciones.db.dao.PacienteDao;
 import com.example.registrosatenciones.db.dao.TipoPrestacionEnfermeriaDao;
 import com.example.registrosatenciones.db.entity.AtencionEnfermeriaEntity;
+import com.example.registrosatenciones.db.entity.ObraSocialEntity;
 import com.example.registrosatenciones.db.entity.PacienteEntity;
 import com.example.registrosatenciones.db.entity.PrestacionEnfermeriaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionEnfermeriaEntity;
@@ -37,8 +39,24 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
     private final PacienteDao pacienteDao;
     private final AtencionEnfermeriaDao atencionDao;
     private final TipoPrestacionEnfermeriaDao tipoPrestacionDao;
+    private final ObraSocialDao obraSocialDao;
 
     private final MutableLiveData<Boolean> guardadoExitoso = new MutableLiveData<>();
+    private final MutableLiveData<List<ObraSocialEntity>> obrasSociales = new MutableLiveData<>();
+
+    // Selección hecha en el diálogo de obra social. Vive acá y no en la
+    // Activity porque la Activity se recrea al rotar; el mismo motivo por el
+    // que catalogoListo/formularioPrecargado viven acá.
+    private Integer nuevaObraSocialSeleccionadaId;
+    private String nuevaObraSocialSeleccionadaNombre;
+
+    public Integer getNuevaObraSocialSeleccionadaId() { return nuevaObraSocialSeleccionadaId; }
+    public String getNuevaObraSocialSeleccionadaNombre() { return nuevaObraSocialSeleccionadaNombre; }
+
+    public void setNuevaObraSocialSeleccionada(Integer id, String nombre) {
+        this.nuevaObraSocialSeleccionadaId = id;
+        this.nuevaObraSocialSeleccionadaNombre = nombre;
+    }
 
     // Las cantidades viven acá y no en la Activity porque los TextView que las
     // muestran se destruyen y se vuelven a crear en cada rotación. Si el estado
@@ -78,6 +96,12 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
         pacienteDao = db.pacienteDao();
         atencionDao = db.atencionEnfermeriaDao();
         tipoPrestacionDao = db.tipoPrestacionEnfermeriaDao();
+        obraSocialDao = db.obraSocialDao();
+
+        AppExecutors.io().execute(() -> {
+            List<ObraSocialEntity> lista = obraSocialDao.listar();
+            AppExecutors.ejecutarEnUI(() -> obrasSociales.setValue(lista));
+        });
     }
 
     public LiveData<PacienteEntity> observarPaciente(long pacienteLocalId) {
@@ -86,6 +110,10 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
 
     public LiveData<List<TipoPrestacionEnfermeriaEntity>> observarCatalogo() {
         return tipoPrestacionDao.observarCatalogo();
+    }
+
+    public LiveData<List<ObraSocialEntity>> getObrasSociales() {
+        return obrasSociales;
     }
 
     public LiveData<Boolean> getGuardadoExitoso() {
@@ -122,21 +150,22 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
     }
 
     public void guardarAtencion(long pacienteLocalId, int tipoAtencion, boolean embarazada,
-                                boolean sinObraSocial, String observaciones, String nuevaObraSocial,
+                                boolean sinObraSocial, String observaciones,
+                                Integer nuevaObraSocialId, String nuevaObraSocialNombre,
                                 List<PrestacionEnfermeriaEntity> prestaciones) {
         if (prestaciones == null || prestaciones.isEmpty()) {
             Toast.makeText(context, "Elegí al menos una prestación", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String nuevaObraSocialLimpia = TextUtils.isEmpty(nuevaObraSocial) ? null : nuevaObraSocial.trim();
+        Integer nuevaObraSocialIdFinal = sinObraSocial ? null : nuevaObraSocialId;
 
         AtencionEnfermeriaEntity atencion = new AtencionEnfermeriaEntity();
         atencion.setPacienteLocalId(pacienteLocalId);
         atencion.setTipoAtencion(tipoAtencion);
         atencion.setEmbarazada(embarazada);
         atencion.setSinObraSocial(sinObraSocial);
-        atencion.setNuevaObraSocial(sinObraSocial ? null : nuevaObraSocialLimpia);
+        atencion.setNuevaObraSocialId(nuevaObraSocialIdFinal);
         atencion.setObservaciones(TextUtils.isEmpty(observaciones) ? null : observaciones.trim());
         atencion.setFechaRegistroLocal(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT).format(new Date()));
         atencion.setInstitucionIdCaptura(PreferenciasUsuario.getInstitucionActivaId(context));
@@ -147,10 +176,11 @@ public class RegistrarAtencionViewModel extends AndroidViewModel {
 
             // Igual que el backend: si se cargó una obra social nueva, queda en el registro del paciente
             // para que la próxima atención ya no la vuelva a pedir.
-            if (!sinObraSocial && nuevaObraSocialLimpia != null) {
+            if (!sinObraSocial && nuevaObraSocialIdFinal != null) {
                 PacienteEntity paciente = pacienteDao.obtenerPorLocalId(pacienteLocalId);
-                if (paciente != null && (paciente.getObraSocial() == null || paciente.getObraSocial().isEmpty())) {
-                    paciente.setObraSocial(nuevaObraSocialLimpia);
+                if (paciente != null && !paciente.tieneObraSocial()) {
+                    paciente.setObraSocialId(nuevaObraSocialIdFinal);
+                    paciente.setObraSocialNombre(nuevaObraSocialNombre);
                     pacienteDao.actualizar(paciente);
                 }
             }

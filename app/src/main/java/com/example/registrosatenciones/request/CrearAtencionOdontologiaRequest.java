@@ -9,7 +9,7 @@ public class CrearAtencionOdontologiaRequest {
     private int diagnosticoId;
     private boolean embarazada;
     private boolean sinObraSocial;
-    private String nuevaObraSocial;
+    private Integer nuevaObraSocialId;
     private String observaciones;
     private List<PrestacionItemRequest> prestaciones;
     private List<OdontogramaEstadoItemRequest> odontograma;
@@ -32,8 +32,8 @@ public class CrearAtencionOdontologiaRequest {
     public boolean isSinObraSocial() { return sinObraSocial; }
     public void setSinObraSocial(boolean sinObraSocial) { this.sinObraSocial = sinObraSocial; }
 
-    public String getNuevaObraSocial() { return nuevaObraSocial; }
-    public void setNuevaObraSocial(String nuevaObraSocial) { this.nuevaObraSocial = nuevaObraSocial; }
+    public Integer getNuevaObraSocialId() { return nuevaObraSocialId; }
+    public void setNuevaObraSocialId(Integer nuevaObraSocialId) { this.nuevaObraSocialId = nuevaObraSocialId; }
 
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }

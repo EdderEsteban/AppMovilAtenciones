@@ -18,10 +18,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.registrosatenciones.R;
 import com.example.registrosatenciones.adapters.DiagnosticoAdapter;
+import com.example.registrosatenciones.adapters.ObraSocialAdapter;
 import com.example.registrosatenciones.databinding.ActivityRegistrarAtencionOdontologiaBinding;
 import com.example.registrosatenciones.databinding.DialogSeleccionarDiagnosticoBinding;
+import com.example.registrosatenciones.databinding.DialogSeleccionarObraSocialBinding;
 import com.example.registrosatenciones.db.entity.AtencionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.DiagnosticoEntity;
+import com.example.registrosatenciones.db.entity.ObraSocialEntity;
 import com.example.registrosatenciones.db.entity.PrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.entity.TipoPrestacionOdontologiaEntity;
 import com.example.registrosatenciones.db.relation.AtencionOdontologiaConDetalle;
@@ -47,6 +50,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
     private boolean modoEdicion;
     private boolean pacienteTieneObraSocial;
     private List<DiagnosticoEntity> listaDiagnosticos = new ArrayList<>();
+    private List<ObraSocialEntity> listaObrasSociales = new ArrayList<>();
 
     private final Map<Integer, TextView> cantidadPorTipoId = new HashMap<>();
 
@@ -110,9 +114,9 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
             binding.divisorEmbarazada.setVisibility(esVaron || modoEdicion ? View.GONE : View.VISIBLE);
 
             if (modoEdicion) return;
-            pacienteTieneObraSocial = paciente.getObraSocial() != null && !paciente.getObraSocial().isEmpty();
+            pacienteTieneObraSocial = paciente.tieneObraSocial();
             if (pacienteTieneObraSocial) {
-                binding.tvObraSocialActual.setText("Obra social: " + paciente.getObraSocial());
+                binding.tvObraSocialActual.setText("Obra social: " + paciente.getObraSocialNombre());
                 binding.tvObraSocialActual.setVisibility(View.VISIBLE);
                 binding.switchSinObraSocial.setChecked(false);
                 binding.switchSinObraSocial.setEnabled(false);
@@ -131,6 +135,9 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
             viewModel.marcarDiagnosticosListos();
             intentarPrecargarFormulario();
         });
+
+        viewModel.getObrasSociales().observe(this, lista ->
+                listaObrasSociales = lista != null ? lista : new ArrayList<>());
 
         viewModel.getCpo().observe(this, v -> {
             binding.tvCariesPerm.setText(String.valueOf(v.cariesPerm));
@@ -155,6 +162,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         });
 
         binding.etDiagnostico.setOnClickListener(v -> mostrarSelectorDiagnostico());
+        binding.etNuevaObraSocial.setOnClickListener(v -> mostrarSelectorObraSocial());
 
         binding.btnCuadrante1.setOnClickListener(v -> abrirEditorCuadrante(1));
         binding.btnCuadrante2.setOnClickListener(v -> abrirEditorCuadrante(2));
@@ -175,8 +183,9 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
                 viewModel.guardarAtencion(pacienteLocalId, tipoConsulta, viewModel.getTurnoSeleccionado(),
                         viewModel.getDiagnosticoSeleccionadoId(), embarazada,
                         binding.switchSinObraSocial.isChecked(),
-                        binding.etNuevaObraSocial.getText().toString(), observaciones,
-                        obtenerPrestacionesSeleccionadas());
+                        viewModel.getNuevaObraSocialSeleccionadaId(),
+                        viewModel.getNuevaObraSocialSeleccionadaNombre(),
+                        observaciones, obtenerPrestacionesSeleccionadas());
             }
         });
 
@@ -228,6 +237,32 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void mostrarSelectorObraSocial() {
+        DialogSeleccionarObraSocialBinding dialogBinding = DialogSeleccionarObraSocialBinding.inflate(getLayoutInflater());
+        RecyclerView rv = dialogBinding.rvObrasSociales;
+        rv.setLayoutManager(new LinearLayoutManager(this));
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogBinding.getRoot()).create();
+
+        ObraSocialAdapter adapter = new ObraSocialAdapter(this, obraSocial -> {
+            viewModel.setNuevaObraSocialSeleccionada(obraSocial.getId(), obraSocial.getNombre());
+            binding.etNuevaObraSocial.setText(obraSocial.getNombre());
+            dialog.dismiss();
+        });
+        adapter.setObrasSociales(listaObrasSociales);
+        rv.setAdapter(adapter);
+
+        dialogBinding.etBuscarObraSocial.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.filtrar(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        dialog.show();
+    }
+
     // En edición la obra social no se toca: al guardar el alta ya quedó escrita en
     // el paciente. Se oculta el bloque entero en vez de dejarlo editable y
     // descartar en silencio lo que el usuario escriba.
@@ -243,6 +278,7 @@ public class RegistrarAtencionOdontologiaActivity extends AppCompatActivity {
         if (sinObraSocial) {
             binding.tilNuevaObraSocial.setVisibility(View.GONE);
             binding.etNuevaObraSocial.setText("");
+            viewModel.setNuevaObraSocialSeleccionada(null, null);
         } else {
             binding.tilNuevaObraSocial.setVisibility(View.VISIBLE);
         }
