@@ -21,7 +21,7 @@ public class AtencionEnfermeriaEntity {
     private int tipoAtencion;          // 1 = Ambulatorio, 2 = Internado
     private boolean embarazada;
     private boolean sinObraSocial;
-    @Nullable private String nuevaObraSocial;
+    @Nullable private Integer nuevaObraSocialId;
     @Nullable private String observaciones;
 
     private String fechaRegistroLocal; // ISO "yyyy-MM-dd'T'HH:mm:ss" — cuándo se capturó
@@ -48,8 +48,8 @@ public class AtencionEnfermeriaEntity {
     public boolean isSinObraSocial() { return sinObraSocial; }
     public void setSinObraSocial(boolean sinObraSocial) { this.sinObraSocial = sinObraSocial; }
 
-    @Nullable public String getNuevaObraSocial() { return nuevaObraSocial; }
-    public void setNuevaObraSocial(@Nullable String nuevaObraSocial) { this.nuevaObraSocial = nuevaObraSocial; }
+    @Nullable public Integer getNuevaObraSocialId() { return nuevaObraSocialId; }
+    public void setNuevaObraSocialId(@Nullable Integer nuevaObraSocialId) { this.nuevaObraSocialId = nuevaObraSocialId; }
 
     @Nullable public String getObservaciones() { return observaciones; }
     public void setObservaciones(@Nullable String observaciones) { this.observaciones = observaciones; }

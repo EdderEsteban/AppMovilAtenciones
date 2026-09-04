@@ -24,7 +24,11 @@ public class PacienteEntity {
 
     @Nullable private String domicilio;
     @Nullable private String telefono;
-    @Nullable private String obraSocial;
+    // Se guardan los dos a propósito. El identificador es lo que viaja al
+    // servidor; el nombre está desnormalizado para poder mostrar la obra social
+    // sin conexión y sin depender de que el catálogo local esté al día.
+    @Nullable private Integer obraSocialId;
+    @Nullable private String obraSocialNombre;
     @Nullable private Integer edad;    // cacheada de la búsqueda del servidor (no se recalcula en el cliente)
 
     @ColumnInfo(defaultValue = "0")
@@ -58,8 +62,18 @@ public class PacienteEntity {
     @Nullable public String getTelefono() { return telefono; }
     public void setTelefono(@Nullable String telefono) { this.telefono = telefono; }
 
-    @Nullable public String getObraSocial() { return obraSocial; }
-    public void setObraSocial(@Nullable String obraSocial) { this.obraSocial = obraSocial; }
+    @Nullable public Integer getObraSocialId() { return obraSocialId; }
+    public void setObraSocialId(@Nullable Integer obraSocialId) { this.obraSocialId = obraSocialId; }
+
+    @Nullable public String getObraSocialNombre() { return obraSocialNombre; }
+    public void setObraSocialNombre(@Nullable String obraSocialNombre) { this.obraSocialNombre = obraSocialNombre; }
+
+    // El paciente "tiene obra social" si quedó registrada de alguna forma: con
+    // identificador del padrón, o solo con el nombre que venía cargado como
+    // texto antes de que existiera el padrón.
+    public boolean tieneObraSocial() {
+        return obraSocialId != null || (obraSocialNombre != null && !obraSocialNombre.isEmpty());
+    }
 
     public int getSyncState() { return syncState; }
     public void setSyncState(int syncState) { this.syncState = syncState; }
