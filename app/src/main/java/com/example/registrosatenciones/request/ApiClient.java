@@ -8,6 +8,7 @@ import com.example.registrosatenciones.response.DashboardResponse;
 import com.example.registrosatenciones.response.DiagnosticoResponse;
 import com.example.registrosatenciones.response.ErrorResponse;
 import com.example.registrosatenciones.response.LoginResponse;
+import com.example.registrosatenciones.response.ObraSocialResponse;
 import com.example.registrosatenciones.response.PacienteDetalleResponse;
 import com.example.registrosatenciones.response.PacienteResponse;
 import com.example.registrosatenciones.response.TipoPrestacionOdontologiaResponse;
@@ -117,6 +118,10 @@ public class ApiClient {
         // Metodo Diagnosticos (catálogo)
         @GET("atenciones-odontologia/diagnosticos")
         Call<List<DiagnosticoResponse>> obtenerDiagnosticos(@Header("Authorization") String token);
+
+        // Metodo ObrasSociales (catálogo)
+        @GET("obras-sociales")
+        Call<List<ObraSocialResponse>> obtenerObrasSociales(@Header("Authorization") String token);
 
         // Metodo CrearAtencionOdontologia
         @POST("atenciones-odontologia")
